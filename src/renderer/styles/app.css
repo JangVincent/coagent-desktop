@@ -1,0 +1,239 @@
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+/* ── macOS titlebar safe area ────────────────────────────────────── */
+/* hiddenInset: traffic lights sit at y≈12, height≈16 → 28px clearance needed.
+   Only the sidebar header (top-left) overlaps the buttons. */
+[data-platform="darwin"] .sidebar-header {
+  padding-top: 32px;
+}
+/* Main chat header spans x=200+, clear of traffic lights — just needs
+   enough height for the drag area to feel right. Already 44px, which is fine. */
+
+/* ── Dark theme (default) ────────────────────────────────────────── */
+:root, [data-theme="dark"] {
+  --bg-base:    #0c0c0c;
+  --bg-sidebar: #111111;
+  --bg-panel:   #161616;
+  --bg-input:   #1e1e1e;
+  --bg-hover:   #212121;
+  --bg-active:  #292929;
+
+  --border:       #262626;
+  --border-mid:   #333333;
+  --border-bright:#404040;
+
+  --text-primary:   #f0f0f0;
+  --text-secondary: #a0a0a0;
+  --text-muted:     #555555;
+  --text-placeholder: #3d3d3d;
+
+  --accent:       #f0f0f0;   /* white in dark mode */
+  --accent-dim:   #2e2e2e;
+  --accent-glow:  rgba(240, 240, 240, 0.06);
+
+  --self-bubble-bg:     #1e1e1e;
+  --self-bubble-border: #333333;
+  --agent-bubble-bg:    #161616;
+  --agent-bubble-border:#262626;
+
+  --ack-bg:     #161616;
+  --ack-border: #2e2e2e;
+  --ack-ok:     #404040;
+  --ack-err:    #3a2020;
+  --ack-op:     #f0f0f0;
+
+  --danger:       #cc4444;
+  --danger-bg:    rgba(204, 68, 68, 0.1);
+  --danger-border:rgba(204, 68, 68, 0.25);
+  --ok:           #555555;
+
+  --scrollbar-thumb: #333333;
+
+  --shadow: 0 4px 24px rgba(0,0,0,0.6);
+
+  color-scheme: dark;
+}
+
+/* ── Light theme ─────────────────────────────────────────────────── */
+[data-theme="light"] {
+  --bg-base:    #fafafa;
+  --bg-sidebar: #f2f2f2;
+  --bg-panel:   #ffffff;
+  --bg-input:   #f5f5f5;
+  --bg-hover:   #ededed;
+  --bg-active:  #e6e6e6;
+
+  --border:       #e0e0e0;
+  --border-mid:   #d0d0d0;
+  --border-bright:#bdbdbd;
+
+  --text-primary:   #0c0c0c;
+  --text-secondary: #555555;
+  --text-muted:     #aaaaaa;
+  --text-placeholder: #c0c0c0;
+
+  --accent:       #0c0c0c;   /* black in light mode */
+  --accent-dim:   #e0e0e0;
+  --accent-glow:  rgba(12, 12, 12, 0.05);
+
+  --self-bubble-bg:     #0c0c0c;
+  --self-bubble-border: #0c0c0c;
+
+  --agent-bubble-bg:    #ffffff;
+  --agent-bubble-border:#e0e0e0;
+
+  --ack-bg:     #f5f5f5;
+  --ack-border: #e0e0e0;
+  --ack-ok:     #d0d0d0;
+  --ack-err:    #f5e0e0;
+  --ack-op:     #0c0c0c;
+
+  --danger:       #cc0000;
+  --danger-bg:    rgba(204, 0, 0, 0.07);
+  --danger-border:rgba(204, 0, 0, 0.2);
+  --ok:           #888888;
+
+  --scrollbar-thumb: #d0d0d0;
+
+  --shadow: 0 4px 24px rgba(0,0,0,0.1);
+
+  color-scheme: light;
+}
+
+/* ── Base ─────────────────────────────────────────────────────────── */
+html, body, #app {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+}
+
+body {
+  background: var(--bg-base);
+  color: var(--text-primary);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  font-size: 13.5px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  transition: background 0.2s, color 0.2s;
+}
+
+button {
+  cursor: pointer;
+  border: none;
+  background: none;
+  color: inherit;
+  font: inherit;
+}
+
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--scrollbar-thumb); border-radius: 3px; }
+
+/* ── Markdown ─────────────────────────────────────────────────────── */
+.markdown-body { color: var(--text-primary); line-height: 1.7; }
+.markdown-body p { margin: 0 0 0.65em; }
+.markdown-body p:last-child { margin-bottom: 0; }
+.markdown-body h1, .markdown-body h2, .markdown-body h3,
+.markdown-body h4, .markdown-body h5, .markdown-body h6 {
+  margin: 1em 0 0.35em;
+  font-weight: 600;
+}
+.markdown-body h1 { font-size: 1.3em; }
+.markdown-body h2 { font-size: 1.15em; }
+.markdown-body h3 { font-size: 1.0em; }
+.markdown-body code {
+  font-family: "SF Mono", "Fira Code", "JetBrains Mono", ui-monospace, monospace;
+  font-size: 0.86em;
+  background: var(--bg-active);
+  border: 1px solid var(--border-mid);
+  border-radius: 3px;
+  padding: 0.1em 0.35em;
+}
+.markdown-body pre {
+  margin: 0.65em 0;
+  border-radius: 6px;
+  overflow-x: auto;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+}
+.markdown-body pre code {
+  display: block;
+  padding: 0.85em 1em;
+  background: none;
+  border: none;
+  border-radius: 0;
+  font-size: 0.84em;
+  line-height: 1.65;
+}
+.markdown-body blockquote {
+  border-left: 2px solid var(--border-bright);
+  margin: 0.5em 0;
+  padding: 0.2em 0.75em;
+  color: var(--text-secondary);
+}
+.markdown-body ul, .markdown-body ol { padding-left: 1.4em; margin: 0.4em 0; }
+.markdown-body li { margin: 0.15em 0; }
+.markdown-body a { color: var(--text-primary); text-decoration: underline; text-underline-offset: 2px; opacity: 0.7; }
+.markdown-body a:hover { opacity: 1; }
+.markdown-body hr { border: none; border-top: 1px solid var(--border); margin: 0.85em 0; }
+.markdown-body table { border-collapse: collapse; width: 100%; margin: 0.65em 0; font-size: 0.93em; }
+.markdown-body th, .markdown-body td {
+  border: 1px solid var(--border);
+  padding: 0.35em 0.7em;
+  text-align: left;
+}
+.markdown-body th { background: var(--bg-active); font-weight: 600; }
+
+.markdown-body details.code-block {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+  margin: 0.65em 0;
+}
+.markdown-body details.code-block summary {
+  padding: 0.4em 0.75em;
+  cursor: pointer;
+  color: var(--text-secondary);
+  font-size: 0.84em;
+  user-select: none;
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
+  background: var(--bg-input);
+}
+.markdown-body details.code-block summary:hover { color: var(--text-primary); }
+.markdown-body details.code-block .lang-label {
+  font-family: monospace;
+  font-size: 0.9em;
+  opacity: 0.6;
+}
+.markdown-body details.code-block pre { margin: 0; border: none; border-radius: 0; border-top: 1px solid var(--border); }
+
+/* ── HLJS monochrome overrides ───────────────────────────────────── */
+[data-theme="dark"] .hljs-keyword,
+[data-theme="dark"] .hljs-selector-tag { color: #e0e0e0; font-weight: 500; }
+[data-theme="dark"] .hljs-string,
+[data-theme="dark"] .hljs-attr { color: #b0b0b0; }
+[data-theme="dark"] .hljs-number,
+[data-theme="dark"] .hljs-literal { color: #cccccc; }
+[data-theme="dark"] .hljs-comment { color: #505050; font-style: italic; }
+[data-theme="dark"] .hljs-type,
+[data-theme="dark"] .hljs-class { color: #d8d8d8; }
+[data-theme="dark"] .hljs-function,
+[data-theme="dark"] .hljs-built_in { color: #c8c8c8; }
+[data-theme="dark"] .hljs-variable { color: #a8a8a8; }
+[data-theme="dark"] .hljs-tag { color: #909090; }
+
+[data-theme="light"] .hljs-keyword,
+[data-theme="light"] .hljs-selector-tag { color: #111111; font-weight: 500; }
+[data-theme="light"] .hljs-string,
+[data-theme="light"] .hljs-attr { color: #444444; }
+[data-theme="light"] .hljs-number,
+[data-theme="light"] .hljs-literal { color: #333333; }
+[data-theme="light"] .hljs-comment { color: #999999; font-style: italic; }
+[data-theme="light"] .hljs-type,
+[data-theme="light"] .hljs-class { color: #222222; }
+[data-theme="light"] .hljs-function,
+[data-theme="light"] .hljs-built_in { color: #333333; }
+[data-theme="light"] .hljs-variable { color: #555555; }
+[data-theme="light"] .hljs-tag { color: #777777; }
