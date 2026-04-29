@@ -379,8 +379,19 @@ async function processQueue() {
   const controller = startTask("turn");
   if (!controller) return;
   const batch = queue.splice(0, queue.length);
-  const header = introSent ? "" : makeIntro(name!, cwd, roster) + "\n\n";
-  introSent = true;
+  let header = "";
+  if (!introSent) {
+    if (initialSessionId) {
+      // Resumed session: keep it short to avoid context overflow.
+      // The previous session already has the full instructions.
+      header = `You are "${name!}", a Claude Code agent (cwd: ${cwd}). ` +
+        `You are resuming a previous session. ` +
+        `IMPORTANT: use the send_chat tool to reply — plain text is silently dropped.\n\n`;
+    } else {
+      header = makeIntro(name!, cwd, roster) + "\n\n";
+    }
+    introSent = true;
+  }
   const body = batch.map((m) => `[from ${m.from}] ${m.content}`).join("\n");
   const promptText = header + body;
 
@@ -388,14 +399,14 @@ async function processQueue() {
   sendActivity("thinking");
   const sendChatBefore = sendChatCallCount;
   let resultText = "";
-  try {
+  const runQuery = async (resumeId: string | undefined) => {
     const res = query({
       prompt: promptText,
       options: {
         cwd,
         executable: "node",
         permissionMode,
-        resume: sessionId ?? undefined,
+        resume: resumeId,
         abortController: controller,
         ...(agentModel ? { model: agentModel } : {}),
         mcpServers: {
@@ -426,19 +437,54 @@ async function processQueue() {
         accumulateModelUsage(r.modelUsage);
       }
     }
+  };
 
-    if (
-      sendChatCallCount === sendChatBefore &&
-      resultText &&
-      ws &&
-      ws.readyState === WebSocket.OPEN
-    ) {
-      ws.send(encode({ type: MSG.MESSAGE, content: resultText }));
-      sendChatCallCount += 1;
+  try {
+    try {
+      await runQuery(sessionId ?? undefined);
+    } catch (e: any) {
+      // If resume fails, retry as a fresh session
+      const isResumeError = sessionId && (
+        String(e?.message ?? e).includes("exited with code") ||
+        String(e?.message ?? e).includes("session")
+      );
+      if (isResumeError && !controller.signal.aborted) {
+        console.warn(`[${name}] resume failed (${e?.message}), retrying as fresh session`);
+        if (ws && ws.readyState === WebSocket.OPEN) {
+          ws.send(encode({
+            type: MSG.MESSAGE,
+            content: `_(session resume failed — starting fresh)_`,
+          }));
+        }
+        setSessionId(null);
+        introSent = false; // re-send intro for the fresh session
+        // Re-add the batch back to queue and re-process as fresh
+        queue.unshift(...batch.map((m) => ({ from: m.from, content: m.content })));
+        return; // let finally → processQueue handle it
+      }
+      throw e; // re-throw non-resume errors
+    }
+
+    if (sendChatCallCount === sendChatBefore && ws && ws.readyState === WebSocket.OPEN) {
+      if (resultText) {
+        ws.send(encode({ type: MSG.MESSAGE, content: resultText }));
+        sendChatCallCount += 1;
+      } else {
+        console.error(`[${name}] turn produced no output`);
+        ws.send(encode({
+          type: MSG.MESSAGE,
+          content: `_(turn completed with no response — try again)_`,
+        }));
+        sendChatCallCount += 1;
+      }
     }
   } catch (e: any) {
     if (!controller.signal.aborted) {
-      console.error(`[${name}] turn error:`, e?.message ?? e);
+      const errMsg = e?.message ?? String(e);
+      console.error(`[${name}] turn error:`, errMsg);
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(encode({ type: MSG.MESSAGE, content: `_(error: ${errMsg})_` }));
+      }
     }
   } finally {
     finishTask(controller);

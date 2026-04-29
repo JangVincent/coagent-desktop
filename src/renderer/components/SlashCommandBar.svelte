@@ -3,6 +3,7 @@
   import { nameColor } from "../lib/name-color.ts";
   import ActivityBadge from "./ActivityBadge.svelte";
   import ContextMenu from "./ContextMenu.svelte";
+  import AgentLogPanel from "./AgentLogPanel.svelte";
 
   let { roomId }: { roomId: string } = $props();
 
@@ -19,6 +20,7 @@
   let menuAgent = $state<string | null>(null);
   let menuX = $state(0);
   let menuY = $state(0);
+  let logAgent = $state<string | null>(null);
 
   function openMenu(e: MouseEvent, agentName: string) {
     e.preventDefault();
@@ -53,7 +55,12 @@
     y={menuY}
     agentName={menuAgent}
     onClose={() => (menuAgent = null)}
+    onShowLogs={() => { logAgent = menuAgent; }}
   />
+{/if}
+
+{#if logAgent}
+  <AgentLogPanel agentName={logAgent} onClose={() => (logAgent = null)} />
 {/if}
 
 <style>

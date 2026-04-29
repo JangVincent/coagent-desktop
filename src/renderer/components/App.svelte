@@ -4,6 +4,7 @@
   import { selfName } from "../lib/stores/self.ts";
   import { rooms, activeRoomId } from "../lib/stores/rooms.ts";
   import { agents, updateAgentStatus } from "../lib/stores/agents.ts";
+  import { appendLog } from "../lib/stores/agent-logs.ts";
   import RoomSidebar from "./RoomSidebar.svelte";
   import ChatView from "./ChatView.svelte";
   import Composer from "./Composer.svelte";
@@ -29,6 +30,10 @@
       initWsClient(port, name);
       window.coagent.onAgentStatus(({ name: agentName, status }) => {
         updateAgentStatus(agentName, status);
+      });
+
+      window.coagent.onAgentLog(({ name: agentName, stream, line }) => {
+        appendLog(agentName, stream, line);
       });
       ready = true;
     } catch (e) {

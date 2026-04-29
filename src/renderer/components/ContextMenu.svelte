@@ -5,11 +5,13 @@
     x, y,
     agentName,
     onClose,
+    onShowLogs,
   }: {
     x: number;
     y: number;
     agentName: string;
     onClose: () => void;
+    onShowLogs?: () => void;
   } = $props();
 
   import { sendControl } from "../lib/ws-client.ts";
@@ -128,6 +130,8 @@
     </button>
     <div class="divider"></div>
     <button class="item danger" onclick={() => { confirmKill = true; }}>/kill</button>
+    <div class="divider"></div>
+    <button class="item logs" onclick={() => { onShowLogs?.(); onClose(); }}>Show logs</button>
   {/if}
 </div>
 
@@ -182,6 +186,8 @@
 
   .item.danger { color: var(--danger); }
   .item.danger:hover { background: var(--danger-bg); }
+  .item.logs { color: var(--text-muted); font-family: inherit; font-size: 12px; }
+  .item.logs:hover { color: var(--text-primary); }
 
   .confirm-section {
     padding: 6px 8px 4px;
