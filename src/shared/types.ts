@@ -33,6 +33,8 @@ export interface CoagentAPI {
   getSelfName(): Promise<{ name: string }>;
   setSelfName(name: string): Promise<void>;
   pickFolder(): Promise<{ path: string | null }>;
+  pickPaths(): Promise<{ paths: string[] }>;
+  getFilePath(file: File): string;
   listSessions(cwd: string): Promise<{ sessions: PastSession[] }>;
   spawnAgent(spec: SpawnAgentOpts): Promise<{ ok: boolean; error?: string }>;
   killAgent(name: string): Promise<{ ok: boolean }>;

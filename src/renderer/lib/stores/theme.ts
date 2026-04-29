@@ -8,7 +8,7 @@ function createThemeStore() {
     : null) as Theme | null;
 
   const initial: Theme = stored ?? "dark";
-  const { subscribe, set } = writable<Theme>(initial);
+  const { subscribe, update } = writable<Theme>(initial);
 
   if (typeof document !== "undefined") {
     document.documentElement.setAttribute("data-theme", initial);
@@ -17,7 +17,7 @@ function createThemeStore() {
   return {
     subscribe,
     toggle() {
-      set((current) => {
+      update((current) => {
         const next: Theme = current === "dark" ? "light" : "dark";
         document.documentElement.setAttribute("data-theme", next);
         localStorage.setItem("coagent-theme", next);

@@ -8,6 +8,7 @@
   import ChatView from "./ChatView.svelte";
   import Composer from "./Composer.svelte";
   import SlashCommandBar from "./SlashCommandBar.svelte";
+  import DropZone from "./DropZone.svelte";
   import ThemeToggle from "./ThemeToggle.svelte";
 
   let ready = $state(false);
@@ -62,9 +63,11 @@
         </div>
       </header>
 
-      <ChatView roomId={$activeRoomId} />
-      <SlashCommandBar roomId={$activeRoomId} />
-      <Composer roomId={$activeRoomId} />
+      <DropZone>
+        <ChatView roomId={$activeRoomId} />
+        <SlashCommandBar roomId={$activeRoomId} />
+        <Composer roomId={$activeRoomId} />
+      </DropZone>
     </main>
   </div>
 {:else}

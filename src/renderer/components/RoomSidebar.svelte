@@ -1,13 +1,49 @@
 <script lang="ts">
-  import { rooms, activeRoomId, createRoom, ensureRoom } from "../lib/stores/rooms.ts";
+  import { rooms, activeRoomId, createRoom, ensureRoom, renameRoom } from "../lib/stores/rooms.ts";
   import { agents, addAgent } from "../lib/stores/agents.ts";
   import { activities } from "../lib/stores/activities.ts";
+  import { selfName } from "../lib/stores/self.ts";
+  import { reconnectWithName } from "../lib/ws-client.ts";
   import ActivityBadge from "./ActivityBadge.svelte";
   import SessionResumeDialog from "./SessionResumeDialog.svelte";
   import type { PastSession } from "@shared/types.ts";
   import { DEFAULT_ROOM } from "@shared/protocol.ts";
 
   let showNewRoom = $state(false);
+
+  // ── room rename ──────────────────────────────────────────────────
+  let editingRoomId = $state<string | null>(null);
+  let roomLabelInput = $state("");
+
+  function startRenameRoom(roomId: string, currentLabel: string) {
+    editingRoomId = roomId;
+    roomLabelInput = currentLabel;
+  }
+
+  function saveRoomName() {
+    const trimmed = roomLabelInput.trim();
+    if (trimmed && editingRoomId) renameRoom(editingRoomId, trimmed);
+    editingRoomId = null;
+  }
+
+  // ── identity ─────────────────────────────────────────────────────
+  let editingName = $state(false);
+  let nameInput = $state("");
+
+  function startEditName() {
+    nameInput = $selfName;
+    editingName = true;
+  }
+
+  async function saveName() {
+    const trimmed = nameInput.trim();
+    if (trimmed && trimmed !== $selfName) {
+      selfName.set(trimmed);
+      await window.coagent.setSelfName(trimmed);
+      reconnectWithName(trimmed); // re-register with hub under new name
+    }
+    editingName = false;
+  }
   let newRoomLabel = $state("");
 
   function submitNewRoom() {
@@ -68,7 +104,7 @@
 
 <nav class="sidebar" aria-label="Rooms">
   <div class="sidebar-header">
-    <span class="sidebar-title">Rooms</span>
+    <span class="sidebar-title">Workspace</span>
     <button class="icon-btn" onclick={() => { showNewRoom = !showNewRoom; newRoomLabel = ""; }} title="New room">
       <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
         <path d="M6 1v10M1 6h10" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
@@ -91,26 +127,43 @@
     </div>
   {/if}
 
-  <div class="room-list" role="listbox">
+  <div class="room-list" role="listbox" style="flex:1;overflow-y:auto">
     {#each $rooms as room (room.id)}
       {@const roomAgents = agentsInRoom(room.id)}
       {@const isActive = $activeRoomId === room.id}
       {@const runningCount = roomAgents.filter(a => a.status !== "exited").length}
 
       <div class="room-section">
-        <button
-          class="room-row"
-          class:active={isActive}
-          onclick={() => activeRoomId.set(room.id)}
-          role="option"
-          aria-selected={isActive}
-        >
-          <span class="room-chevron">{isActive ? "▾" : "▸"}</span>
-          <span class="room-label"># {room.label}</span>
-          {#if runningCount > 0}
-            <span class="count-badge">{runningCount}</span>
-          {/if}
-        </button>
+        {#if editingRoomId === room.id}
+          <div class="room-row active">
+            <span class="room-chevron">▾</span>
+            <input
+              class="room-label-input"
+              bind:value={roomLabelInput}
+              onkeydown={(e) => {
+                if (e.key === "Enter") saveRoomName();
+                if (e.key === "Escape") editingRoomId = null;
+              }}
+              onblur={saveRoomName}
+            />
+          </div>
+        {:else}
+          <button
+            class="room-row"
+            class:active={isActive}
+            onclick={() => activeRoomId.set(room.id)}
+            ondblclick={() => startRenameRoom(room.id, room.label)}
+            role="option"
+            aria-selected={isActive}
+            title="Double-click to rename"
+          >
+            <span class="room-chevron">{isActive ? "▾" : "▸"}</span>
+            <span class="room-label"># {room.label}</span>
+            {#if runningCount > 0}
+              <span class="count-badge">{runningCount}</span>
+            {/if}
+          </button>
+        {/if}
 
         {#if isActive}
           <div class="agent-section">
@@ -123,17 +176,20 @@
             {/each}
 
             {#if showAgentName && addTargetRoom === room.id}
-              <div class="inline-form agent-form">
-                <input
-                  class="text-input"
-                  bind:value={agentNameInput}
-                  placeholder="agent-name"
-                  onkeydown={(e) => {
-                    if (e.key === "Enter") confirmAgentName();
-                    if (e.key === "Escape") showAgentName = false;
-                  }}
-                />
-                <button class="submit-btn" onclick={confirmAgentName}>Add</button>
+              <div class="agent-name-form">
+                <p class="agent-name-label">Agent name</p>
+                <div class="inline-form">
+                  <input
+                    class="text-input"
+                    bind:value={agentNameInput}
+                    placeholder="agent-name"
+                    onkeydown={(e) => {
+                      if (e.key === "Enter") confirmAgentName();
+                      if (e.key === "Escape") showAgentName = false;
+                    }}
+                  />
+                  <button class="submit-btn" onclick={confirmAgentName}>Add</button>
+                </div>
               </div>
             {:else}
               <button class="add-agent-row" onclick={() => addAgentToRoom(room.id)}>
@@ -147,6 +203,25 @@
         {/if}
       </div>
     {/each}
+  </div>
+
+  <div class="identity">
+    {#if editingName}
+      <input
+        class="name-input"
+        bind:value={nameInput}
+        onkeydown={(e) => {
+          if (e.key === "Enter") saveName();
+          if (e.key === "Escape") editingName = false;
+        }}
+        onblur={saveName}
+      />
+    {:else}
+      <button class="name-btn" onclick={startEditName} title="클릭해서 이름 변경">
+        <span class="name-avatar">{($selfName || "?")[0].toUpperCase()}</span>
+        <span class="name-text">{$selfName || "—"}</span>
+      </button>
+    {/if}
   </div>
 </nav>
 
@@ -175,7 +250,7 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 12px 14px 10px;
+    padding: var(--sidebar-top-padding, 12px) 14px 10px;
     -webkit-app-region: drag;
     flex-shrink: 0;
   }
@@ -201,7 +276,25 @@
     gap: 4px;
     padding: 0 8px 8px;
   }
-  .agent-form { padding-left: 24px; }
+
+  .agent-name-form {
+    margin: 6px 8px 4px;
+    border: 1px solid var(--border-mid);
+    border-radius: 7px;
+    overflow: hidden;
+    background: var(--bg-input);
+  }
+  .agent-name-label {
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+    padding: 7px 8px 4px;
+  }
+  .agent-name-form .inline-form {
+    padding: 0 6px 6px;
+  }
   .text-input {
     flex: 1;
     min-width: 0;
@@ -245,6 +338,18 @@
 
   .room-chevron { font-size: 9px; color: var(--text-muted); width: 9px; flex-shrink: 0; }
   .room-label { font-size: 12.5px; font-weight: 500; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .room-label-input {
+    flex: 1;
+    background: none;
+    border: none;
+    outline: none;
+    font: inherit;
+    font-size: 12.5px;
+    font-weight: 500;
+    color: var(--text-primary);
+    padding: 0;
+    min-width: 0;
+  }
   .count-badge {
     font-size: 10px;
     color: var(--text-muted);
@@ -300,4 +405,44 @@
     transition: color 0.1s, background 0.1s;
   }
   .add-agent-row:hover { color: var(--text-primary); background: var(--bg-hover); }
+
+  .identity {
+    border-top: 1px solid var(--border);
+    padding: 8px;
+    flex-shrink: 0;
+  }
+  .name-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 6px 8px;
+    border-radius: 6px;
+    color: var(--text-secondary);
+    font-size: 12px;
+    transition: background 0.1s, color 0.1s;
+  }
+  .name-btn:hover { background: var(--bg-hover); color: var(--text-primary); }
+  .name-avatar {
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    background: var(--bg-active);
+    border: 1px solid var(--border-mid);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 600;
+    flex-shrink: 0;
+    color: var(--text-primary);
+  }
+  .name-text { flex: 1; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .name-input {
+    width: 100%;
+    background: var(--bg-input);
+    border: 1px solid var(--border-bright);
+    border-radius: 6px;
+    padding: 6px 8px;
+    font: inherit;
+    font-size: 12px;
+    color: var(--text-primary);
+    outline: none;
+  }
 </style>

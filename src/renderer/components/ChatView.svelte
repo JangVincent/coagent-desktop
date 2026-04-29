@@ -2,6 +2,7 @@
   import { messages } from "../lib/stores/messages.ts";
   import { selfName } from "../lib/stores/self.ts";
   import MarkdownMessage from "./MarkdownMessage.svelte";
+  import { nameColor } from "../lib/name-color.ts";
   import { tick } from "svelte";
 
   let { roomId }: { roomId: string } = $props();
@@ -27,13 +28,6 @@
     return new Date(ts).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
   }
 
-  // Deterministic gray shade per name (monochrome palette)
-  const SHADES = ["#f0f0f0", "#c8c8c8", "#a8a8a8", "#888888", "#e0e0e0", "#d0d0d0", "#b8b8b8", "#989898"];
-  function nameColor(name: string): string {
-    let h = 0;
-    for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) | 0;
-    return SHADES[Math.abs(h) % SHADES.length];
-  }
 </script>
 
 <div class="chat-view" bind:this={viewport} onscroll={onScroll} role="log">
@@ -109,14 +103,9 @@
     border-radius: 12px 12px 12px 3px;
   }
   .bubble-me {
-    background: var(--self-bubble-bg);
-    border: 1px solid var(--self-bubble-border);
+    background: var(--agent-bubble-bg);
+    border: 1px solid var(--agent-bubble-border);
     border-radius: 12px 12px 3px 12px;
-    color: var(--bg-base);
-  }
-  /* Light mode: self bubble needs readable text */
-  :global([data-theme="light"]) .bubble-me {
-    color: #fafafa;
   }
 
   .msg-time {

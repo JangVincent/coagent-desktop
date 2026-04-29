@@ -2,11 +2,36 @@
   import { sendChat, sendControl } from "../lib/ws-client.ts";
   import { agents } from "../lib/stores/agents.ts";
   import { COMMANDS, completeSlash } from "../lib/slash-commands.ts";
+  import { nameColor } from "../lib/name-color.ts";
+  import { pendingDropPaths, clearDropPaths } from "../lib/stores/drop.ts";
+  import { onMount } from "svelte";
 
   let { roomId }: { roomId: string } = $props();
 
   let text = $state("");
   let textarea: HTMLTextAreaElement;
+
+  // Insert dropped paths into the composer at cursor
+  $effect(() => {
+    if ($pendingDropPaths.length && textarea) {
+      const insert = $pendingDropPaths.join(" ") + " ";
+      const pos = textarea.selectionStart ?? text.length;
+      text = text.slice(0, pos) + insert + text.slice(pos);
+      clearDropPaths();
+      textarea.focus();
+      autoResize();
+    }
+  });
+
+  async function pickFiles() {
+    const { paths } = await window.coagent.pickPaths();
+    if (!paths.length) return;
+    const insert = paths.join(" ") + " ";
+    const pos = textarea.selectionStart ?? text.length;
+    text = text.slice(0, pos) + insert + text.slice(pos);
+    textarea.focus();
+    autoResize();
+  }
 
   let roomAgentNames = $derived(
     $agents.filter((a) => a.room === roomId && a.status !== "exited").map((a) => a.name)
@@ -88,7 +113,10 @@
   function submit() {
     const val = text.trim();
     if (!val) return;
-    if (val.startsWith("/")) {
+    // Only treat as slash command if it matches /command format (not file paths like /Users/...)
+    const slashMatch = val.match(/^\/([a-z]+)\s+/i);
+    const isSlashCmd = slashMatch && COMMANDS.some((c) => c.name === slashMatch[1].toLowerCase());
+    if (isSlashCmd) {
       const p = parseSlash(val);
       if (p) sendControl(p.target, p.op, p.arg);
     } else {
@@ -98,16 +126,6 @@
     showMention = false;
     showSlash = false;
     textarea.style.height = "auto";
-  }
-
-  function handleDrop(e: DragEvent) {
-    e.preventDefault();
-    const paths = Array.from(e.dataTransfer?.files ?? [])
-      .map((f) => (f as any).path as string)
-      .filter(Boolean);
-    if (!paths.length) return;
-    const pos = textarea.selectionStart ?? text.length;
-    text = text.slice(0, pos) + paths.join(" ") + " " + text.slice(pos);
   }
 
   function autoResize() {
@@ -127,7 +145,8 @@
     <div class="popup" role="listbox">
       {#each mentionSuggestions as s, i}
         <button class="popup-item" class:focused={i === mentionIdx} onclick={() => insertMention(s)} role="option" aria-selected={i === mentionIdx}>
-          <span class="popup-at">@</span>{s}
+          <span class="name-dot" style:background={s === "all" ? "var(--text-muted)" : nameColor(s)}></span>
+          <span class="popup-at">@</span><span style:color={s === "all" ? "var(--text-secondary)" : nameColor(s)}>{s}</span>
         </button>
       {/each}
     </div>
@@ -152,13 +171,22 @@
       rows={1}
       onkeydown={handleKeydown}
       oninput={() => { detectPopup(); autoResize(); }}
-      ondrop={handleDrop}
-      ondragover={(e) => e.preventDefault()}
       disabled={roomAgentNames.length === 0}
       spellcheck="false"
       autocorrect="off"
       autocapitalize="off"
     ></textarea>
+    <button
+      class="attach-btn"
+      onclick={pickFiles}
+      title="Attach file or folder"
+      type="button"
+      tabindex="-1"
+    >
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12.5 6.5L6.5 12.5a3.5 3.5 0 01-5-5L7 2a2 2 0 013 3L4.5 10.5a.5.5 0 01-.7-.7L9.5 4"/>
+      </svg>
+    </button>
     <button
       class="send-btn"
       onclick={submit}
@@ -211,6 +239,18 @@
   textarea::placeholder { color: var(--text-placeholder); }
   textarea:disabled { cursor: not-allowed; }
 
+  .attach-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px; height: 28px;
+    border-radius: 7px;
+    color: var(--text-muted);
+    flex-shrink: 0;
+    transition: color 0.15s, background 0.15s;
+  }
+  .attach-btn:hover { color: var(--text-primary); background: var(--bg-hover); }
+
   .send-btn {
     width: 28px; height: 28px;
     display: flex; align-items: center; justify-content: center;
@@ -253,6 +293,11 @@
     transition: background 0.1s;
   }
   .popup-item:hover, .popup-item.focused { background: var(--bg-active); color: var(--text-primary); }
+  .name-dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
   .popup-at { font-weight: 700; color: var(--text-muted); }
   .popup-slash { font-family: monospace; font-weight: 700; color: var(--text-primary); flex-shrink: 0; }
   .popup-desc { color: var(--text-muted); font-size: 11px; }

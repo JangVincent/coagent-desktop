@@ -97,6 +97,9 @@ if (initialSessionId) {
 
 let ws: WebSocket | null = null;
 let sessionId: string | null = initialSessionId ?? null;
+// Always send intro on first turn — it contains the critical send_chat instruction.
+// For resumed sessions Claude already has context, but still needs the current
+// participant list and send_chat reminder for this new connection.
 let introSent = false;
 let roster: Participant[] = [];
 const queue: { from: string; content: string }[] = [];

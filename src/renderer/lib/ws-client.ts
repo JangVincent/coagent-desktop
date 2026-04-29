@@ -9,6 +9,7 @@ let myName = "";
 let myRoom = DEFAULT_ROOM;
 let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
 let reconnectAttempt = 0;
+let manualClose = false; // true while intentionally disconnecting for rename
 const RECONNECT_DELAYS = [500, 1000, 2000, 4000, 8000];
 
 export function initWsClient(hubPort: number, name: string, room = DEFAULT_ROOM) {
@@ -53,6 +54,7 @@ function connect() {
   };
 
   ws.onclose = () => {
+    if (manualClose) return; // reconnectWithName() handles reconnect
     const delay = RECONNECT_DELAYS[Math.min(reconnectAttempt, RECONNECT_DELAYS.length - 1)];
     reconnectAttempt++;
     reconnectTimer = setTimeout(() => { reconnectTimer = null; connect(); }, delay);
@@ -77,4 +79,19 @@ export function sendControl(target: string, op: string, arg?: string) {
 
 export function isConnected(): boolean {
   return ws?.readyState === WebSocket.OPEN;
+}
+
+// Disconnect with the old name and reconnect with the new one.
+// The hub releases the old name on close, so the new name can register cleanly.
+export function reconnectWithName(newName: string) {
+  myName = newName;
+  manualClose = true;
+  if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null; }
+  try { ws?.close(); } catch {}
+  // Small delay so the hub processes the disconnect before the new hello
+  setTimeout(() => {
+    manualClose = false;
+    reconnectAttempt = 0;
+    connect();
+  }, 300);
 }

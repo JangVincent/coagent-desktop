@@ -25,6 +25,12 @@ export function deleteRoom(id: string) {
   }
 }
 
+export function renameRoom(id: string, label: string) {
+  rooms.update((list) =>
+    list.map((r) => (r.id === id ? { ...r, label } : r))
+  );
+}
+
 export function ensureRoom(id: string, label?: string) {
   rooms.update((list) => {
     if (list.find((r) => r.id === id)) return list;

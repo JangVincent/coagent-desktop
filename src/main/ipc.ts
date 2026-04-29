@@ -47,6 +47,15 @@ export function registerIpc(hubPort: number) {
     return { path: result.canceled ? null : result.filePaths[0] };
   });
 
+  // Pick files and/or folders (multiple selection)
+  ipcMain.handle("dialog:pick-paths", async (e) => {
+    const win = BrowserWindow.fromWebContents(e.sender);
+    const result = await dialog.showOpenDialog(win!, {
+      properties: ["openFile", "openDirectory", "multiSelections"],
+    });
+    return { paths: result.canceled ? [] : result.filePaths };
+  });
+
   ipcMain.handle("agent:list-sessions", (_e, cwd: string) => {
     const sessions = listClaudeSessions(cwd);
     return { sessions };

@@ -1,13 +1,11 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 /* ── macOS titlebar safe area ────────────────────────────────────── */
-/* hiddenInset: traffic lights sit at y≈12, height≈16 → 28px clearance needed.
-   Only the sidebar header (top-left) overlaps the buttons. */
-[data-platform="darwin"] .sidebar-header {
-  padding-top: 32px;
+/* Used by RoomSidebar .sidebar-header directly as CSS variable.
+   Set to 36px on macOS (traffic lights), 12px elsewhere. */
+:root {
+  --sidebar-top-padding: 12px;
 }
-/* Main chat header spans x=200+, clear of traffic lights — just needs
-   enough height for the drag area to feel right. Already 44px, which is fine. */
 
 /* ── Dark theme (default) ────────────────────────────────────────── */
 :root, [data-theme="dark"] {
@@ -76,8 +74,8 @@
   --accent-dim:   #e0e0e0;
   --accent-glow:  rgba(12, 12, 12, 0.05);
 
-  --self-bubble-bg:     #0c0c0c;
-  --self-bubble-border: #0c0c0c;
+  --self-bubble-bg:     #e2e2e2;
+  --self-bubble-border: #cccccc;
 
   --agent-bubble-bg:    #ffffff;
   --agent-bubble-border:#e0e0e0;
