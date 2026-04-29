@@ -24,8 +24,15 @@
   let menu: HTMLElement;
 
   // Clamp position so menu doesn't go off screen
-  let left = $derived(Math.min(x, window.innerWidth - 220));
-  let top = $derived(Math.min(y, window.innerHeight - 320));
+  const MENU_HEIGHT = 300;
+  const MENU_WIDTH = 200;
+  let left = $derived(Math.min(x, window.innerWidth - MENU_WIDTH - 8));
+  // Open above the cursor when near the bottom of the screen
+  let top = $derived(
+    y + MENU_HEIGHT > window.innerHeight
+      ? Math.max(8, y - MENU_HEIGHT)
+      : y
+  );
 
   function send(op: string, arg?: string) {
     sendControl(agentName, op, arg);

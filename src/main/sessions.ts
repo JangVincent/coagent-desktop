@@ -21,13 +21,22 @@ export function listClaudeSessions(cwdPath: string): PastSession[] {
   const projectDir = path.join(projectsDir, encodeProjectPath(cwdPath));
   if (!fs.existsSync(projectDir)) return [];
 
-  const files = fs.readdirSync(projectDir).filter((f) => f.endsWith(".jsonl"));
+  const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+  const files = fs.readdirSync(projectDir)
+    .filter((f) => f.endsWith(".jsonl"))
+    // Only UUID-format sessions can be resumed via `claude --resume`.
+    // agent-XXXXXXX files are created by the agent SDK and are not resumable.
+    .filter((f) => UUID_RE.test(f.slice(0, -6)));
   const sessions: PastSession[] = [];
 
   for (const file of files) {
     try {
       const fullPath = path.join(projectDir, file);
       const stat = fs.statSync(fullPath);
+      // 139-byte files are incomplete session stubs (no conversation content)
+      // Only include sessions with substantial content (>= 500 bytes)
+      if (stat.size < 500) continue;
       const sid = file.replace(/\.jsonl$/, "");
 
       const fd = fs.openSync(fullPath, "r");
@@ -40,24 +49,38 @@ export function listClaudeSessions(cwdPath: string): PastSession[] {
         .filter((l) => l.trim().length > 0);
 
       let preview = "";
+      // The JSONL internal session_id may differ from the filename.
+      // claude --resume expects the internal UUID, not the filename.
+      let internalSid: string | undefined;
+
       for (const line of headLines) {
         try {
           const m = JSON.parse(line);
-          if (m.type === "user" && m.message?.content) {
+          // Extract the internal session id (UUID format) if available
+          if (!internalSid) {
+            const candidate =
+              m.session_id ?? m.sessionId ?? m.id ?? m.uuid;
+            if (typeof candidate === "string" && /^[0-9a-f-]{8,}$/i.test(candidate)) {
+              internalSid = candidate;
+            }
+          }
+          if (!preview && m.type === "user" && m.message?.content) {
             const c = m.message.content;
             if (typeof c === "string") preview = c;
             else if (Array.isArray(c) && c[0]?.type === "text")
               preview = c[0].text ?? "";
-            if (preview) break;
           }
+          if (preview && internalSid) break;
         } catch {
           // partial JSON at cutoff — ignore
         }
       }
 
+      // Prefer internal UUID; fall back to filename-based id
+      const resolvedSid = internalSid ?? sid;
       preview = preview.replace(/\s+/g, " ").trim().slice(0, PREVIEW_CHAR_LIMIT);
       const turns = Math.max(1, Math.round(stat.size / BYTES_PER_TURN_ESTIMATE));
-      sessions.push({ sid, mtimeMs: stat.mtimeMs, preview, turns });
+      sessions.push({ sid: resolvedSid, mtimeMs: stat.mtimeMs, preview, turns });
     } catch {
       // skip unreadable file
     }

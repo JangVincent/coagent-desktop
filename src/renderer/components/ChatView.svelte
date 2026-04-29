@@ -34,15 +34,23 @@
   {#each chatList as entry (entry.ts + entry.kind + ("from" in entry ? entry.from : "sys"))}
     {#if entry.kind === "chat"}
       {@const isMe = entry.from === $selfName}
-      <div class="msg-wrap" class:msg-wrap-me={isMe}>
-        {#if !isMe}
-          <div class="sender-name" style:color={nameColor(entry.from)}>{entry.from}</div>
-        {/if}
-        <div class="bubble" class:bubble-me={isMe} class:bubble-agent={!isMe}>
-          <MarkdownMessage content={entry.content} />
+      {@const isAgentError = !isMe && /^\s*_\(.*\)_\s*$/.test(entry.content)}
+      {#if isAgentError}
+        <div class="error-notice">
+          <span class="error-notice-name" style:color={nameColor(entry.from)}>{entry.from}</span>
+          <span class="error-notice-text">{entry.content.replace(/^\s*_\(/, "").replace(/\)_\s*$/, "")}</span>
         </div>
-        <div class="msg-time">{formatTime(entry.ts)}</div>
-      </div>
+      {:else}
+        <div class="msg-wrap" class:msg-wrap-me={isMe}>
+          {#if !isMe}
+            <div class="sender-name" style:color={nameColor(entry.from)}>{entry.from}</div>
+          {/if}
+          <div class="bubble" class:bubble-me={isMe} class:bubble-agent={!isMe}>
+            <MarkdownMessage content={entry.content} />
+          </div>
+          <div class="msg-time">{formatTime(entry.ts)}</div>
+        </div>
+      {/if}
     {:else if entry.kind === "system"}
       <div class="system-msg">— {entry.text} —</div>
     {:else if entry.kind === "control_ack"}
@@ -113,6 +121,21 @@
     color: var(--text-muted);
     padding: 0 2px;
   }
+
+  .error-notice {
+    align-self: flex-start;
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    padding: 7px 12px;
+    border-radius: 8px;
+    border-left: 2px solid var(--danger);
+    background: var(--danger-bg);
+    font-size: 12px;
+    max-width: 88%;
+  }
+  .error-notice-name { font-weight: 600; font-size: 11px; flex-shrink: 0; }
+  .error-notice-text { color: var(--danger); font-family: ui-monospace, monospace; }
 
   .system-msg {
     align-self: center;
