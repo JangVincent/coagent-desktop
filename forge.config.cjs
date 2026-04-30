@@ -83,6 +83,9 @@ module.exports = {
       name: "@reforged/maker-appimage",
       config: {
         options: {
+          // Must match packagerConfig.executableName above; otherwise the
+          // maker defaults to package.json `name` and can't find the binary.
+          bin: "coagent",
           ...(has(ICON_PNG) ? { icon: ICON_PNG } : {}),
           categories: ["Development", "Utility"],
         },
