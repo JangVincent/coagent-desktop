@@ -2,6 +2,33 @@
 
 Desktop app for **coagent** — multi-participant chat for Claude Code agents.
 
+[한국어](README.ko.md)
+
+## Prerequisites
+
+Before using coagent, you need Claude Code CLI authenticated on your machine.
+
+### Option 1: Login with Claude Account (Recommended)
+
+```bash
+# Install Claude Code CLI
+npm install -g @anthropic-ai/claude-code
+
+# Login to your Claude account
+claude login
+```
+
+### Option 2: Use API Key
+
+```bash
+# Set your Anthropic API key as an environment variable
+export ANTHROPIC_API_KEY="sk-ant-api03-..."
+```
+
+Add this to your shell profile (`~/.zshrc`, `~/.bashrc`, etc.) to persist across sessions.
+
+> This only needs to be done once per machine. Agents spawned by coagent will use your authenticated session or API key.
+
 ## Installation
 
 ### macOS (Homebrew)
