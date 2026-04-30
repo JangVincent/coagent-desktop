@@ -17,6 +17,16 @@ Download the latest `.dmg` from [Releases](https://github.com/JangVincent/coagen
 
 > **Note:** Apple Silicon (arm64) only. Intel Macs are not supported.
 
+#### "coagent is damaged and can't be opened"
+
+The app is not notarized, so macOS quarantines it on first launch. Remove the quarantine attribute:
+
+```bash
+sudo xattr -dr com.apple.quarantine /Applications/coagent.app
+```
+
+This applies to both Homebrew and manual `.dmg` installs.
+
 ### Windows
 
 Download the latest `.exe` installer from [Releases](https://github.com/JangVincent/coagent-app/releases).
