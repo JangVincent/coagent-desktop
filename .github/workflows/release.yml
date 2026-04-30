@@ -17,15 +17,19 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # macOS — universal binary covers both Apple Silicon and Intel.
+          # macOS Apple Silicon (M1/M2/M3) — runs on macos-latest (arm64).
           - os: macos-latest
-            arch: universal
-            label: macos
+            arch: arm64
+            label: macos-arm64
+          # macOS Intel — macos-13 is the last GitHub-hosted x64 runner.
+          - os: macos-13
+            arch: x64
+            label: macos-x64
           # Windows — x64 squirrel installer.
           - os: windows-latest
             arch: x64
             label: windows
-          # Linux — deb + zip.
+          # Linux — deb + AppImage + zip.
           - os: ubuntu-latest
             arch: x64
             label: linux
