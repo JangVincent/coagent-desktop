@@ -40,10 +40,10 @@ module.exports = {
       /^\/\.gitignore$/,
       /^\/assets\/icon\.src\.png$/,
     ],
-    // The agent-runtime is built separately by esbuild → dist/agent-runtime/entry.cjs.
-    // Ship it as an extraResource so app.isPackaged path resolves to
-    // process.resourcesPath/agent-runtime/entry.cjs (see src/main/agent-manager.ts).
-    extraResource: ["./dist/agent-runtime"],
+    // The agent-runtime (dist/agent-runtime/entry.cjs) is shipped INSIDE the
+    // asar alongside dist/main, so that its require()s for the externals
+    // (@anthropic-ai/claude-agent-sdk, ws, zod) resolve via the sibling
+    // node_modules. See src/main/agent-manager.ts agentEntryPath().
   },
   rebuildConfig: {},
   makers: [

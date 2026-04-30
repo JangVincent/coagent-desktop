@@ -27,9 +27,9 @@ export function initAgentManager(
 }
 
 function agentEntryPath(): string {
-  if (app.isPackaged) {
-    return path.join(process.resourcesPath, "agent-runtime", "entry.cjs");
-  }
+  // Always inside the app bundle (asar in packaged builds, project root in dev).
+  // Living next to dist/main lets `require("@anthropic-ai/claude-agent-sdk")`
+  // and other externals resolve via the sibling node_modules.
   return path.join(app.getAppPath(), "dist", "agent-runtime", "entry.cjs");
 }
 
