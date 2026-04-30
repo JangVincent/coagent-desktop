@@ -19,7 +19,7 @@ fixPath();
 if (app.isPackaged && process.platform !== "darwin") {
   try {
     updateElectronApp({
-      repo: "JangVincent/coagent-desktop",
+      repo: "JangVincent/coagent-app",
       updateInterval: "1 hour",
       logger: console,
     });

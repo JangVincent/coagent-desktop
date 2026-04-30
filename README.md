@@ -13,13 +13,13 @@ brew install --cask coagent-app
 
 ### macOS (Manual)
 
-Download the latest `.dmg` from [Releases](https://github.com/JangVincent/coagent-desktop/releases) and drag to Applications.
+Download the latest `.dmg` from [Releases](https://github.com/JangVincent/coagent-app/releases) and drag to Applications.
 
 > **Note:** Apple Silicon (arm64) only. Intel Macs are not supported.
 
 ### Windows
 
-Download the latest `.exe` installer from [Releases](https://github.com/JangVincent/coagent-desktop/releases).
+Download the latest `.exe` installer from [Releases](https://github.com/JangVincent/coagent-app/releases).
 
 Auto-updates are enabled — the app will check for updates hourly and install them automatically.
 

@@ -33,7 +33,7 @@
       ready = true;
     } catch (e) {
       initError = String(e);
-      console.error("coagent-desktop init failed:", e);
+      console.error("coagent-app init failed:", e);
     }
   });
 </script>
