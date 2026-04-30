@@ -379,10 +379,22 @@ const sendChatTool = tool(
   },
 );
 
+const getParticipantsTool = tool(
+  "get_participants",
+  "Get the current list of participants in the chat room. Returns names and roles (human/agent).",
+  {},
+  async () => {
+    const list = roster.length > 0
+      ? roster.map((p) => `${p.name} (${p.role})`).join(", ")
+      : "(no participants)";
+    return { content: [{ type: "text" as const, text: list }] };
+  },
+);
+
 const chatServer = createSdkMcpServer({
   name: "agent-chat",
   version: "1.0.0",
-  tools: [sendChatTool],
+  tools: [sendChatTool, getParticipantsTool],
 });
 
 async function processQueue() {

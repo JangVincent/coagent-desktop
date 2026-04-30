@@ -11,6 +11,27 @@
   let text = $state("");
   let textarea: HTMLTextAreaElement;
 
+  // Message history for up-arrow editing (per room, last N messages)
+  const MAX_HISTORY = 50;
+  let messageHistory = $state<Map<string, string[]>>(new Map());
+  let historyIdx = $state(-1); // -1 = not browsing history
+  let draftText = $state(""); // save current input when browsing history
+
+  function getHistory(): string[] {
+    return messageHistory.get(roomId) ?? [];
+  }
+
+  function pushHistory(msg: string) {
+    const trimmed = msg.trim();
+    if (!trimmed) return;
+    const history = getHistory();
+    // Avoid consecutive duplicates
+    if (history[history.length - 1] === trimmed) return;
+    history.push(trimmed);
+    if (history.length > MAX_HISTORY) history.shift();
+    messageHistory.set(roomId, history);
+  }
+
   // Insert dropped paths into the composer at cursor
   $effect(() => {
     if ($pendingDropPaths.length && textarea) {
@@ -105,6 +126,45 @@
       const completed = completeSlash(text, roomAgentNames);
       if (completed) text = completed;
     }
+    // Up arrow at cursor position 0 (or empty input) → browse history
+    if (e.key === "ArrowUp" && !showMention && !showSlash) {
+      const atStart = textarea.selectionStart === 0 && textarea.selectionEnd === 0;
+      if (atStart || text === "") {
+        const history = getHistory();
+        if (history.length === 0) return;
+        e.preventDefault();
+        if (historyIdx === -1) {
+          // Start browsing: save current draft
+          draftText = text;
+          historyIdx = history.length - 1;
+        } else if (historyIdx > 0) {
+          historyIdx--;
+        }
+        text = history[historyIdx];
+        // Move cursor to end after setting text
+        requestAnimationFrame(() => {
+          textarea.selectionStart = textarea.selectionEnd = text.length;
+        });
+        return;
+      }
+    }
+    // Down arrow while browsing history → go forward or restore draft
+    if (e.key === "ArrowDown" && historyIdx !== -1 && !showMention && !showSlash) {
+      const history = getHistory();
+      e.preventDefault();
+      if (historyIdx < history.length - 1) {
+        historyIdx++;
+        text = history[historyIdx];
+      } else {
+        // Restore draft and exit history mode
+        text = draftText;
+        historyIdx = -1;
+      }
+      requestAnimationFrame(() => {
+        textarea.selectionStart = textarea.selectionEnd = text.length;
+      });
+      return;
+    }
   }
 
   function parseSlash(input: string): { op: string; target: string; arg?: string } | null {
@@ -139,7 +199,10 @@
     } else {
       sendChat(val);
     }
+    pushHistory(val);
     text = "";
+    historyIdx = -1; // Reset history browsing
+    draftText = "";
     showMention = false;
     showSlash = false;
     textarea.style.height = "auto";
