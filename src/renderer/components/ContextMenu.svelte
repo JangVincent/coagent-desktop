@@ -15,8 +15,9 @@
   } = $props();
 
   import { sendControl } from "../lib/ws-client.ts";
+  import { agents, setAgentPaused } from "../lib/stores/agents.ts";
 
-  let paused = $state(false);
+  let paused = $derived($agents.find((a) => a.name === agentName)?.paused ?? false);
   let showModeMenu = $state(false);
   let showModelMenu = $state(false);
   let confirmKill = $state(false);
@@ -40,8 +41,10 @@
   }
 
   function togglePause() {
-    paused = !paused;
-    sendControl(agentName, paused ? "pause" : "resume");
+    const next = !paused;
+    // Optimistic update — control_ack will reaffirm/correct.
+    setAgentPaused(agentName, next);
+    sendControl(agentName, next ? "pause" : "resume");
     onClose();
   }
 
@@ -146,83 +149,105 @@
   .menu {
     position: fixed;
     z-index: 9999;
-    background: var(--bg-panel);
-    border: 1px solid var(--border-bright);
-    border-radius: 9px;
+    background: var(--bg-2);
+    border: 1px solid var(--line-3);
+    border-radius: var(--r-md);
     padding: 4px;
-    min-width: 180px;
-    box-shadow: var(--shadow);
+    min-width: 200px;
+    box-shadow: var(--shadow-pop);
     display: flex;
     flex-direction: column;
+    animation: menu-in 140ms var(--ease);
+  }
+  @keyframes menu-in {
+    from { opacity: 0; transform: translateY(-2px) scale(0.98); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
   }
 
   .menu-header {
-    font-size: 11px;
-    font-weight: 600;
-    color: var(--text-muted);
-    padding: 5px 10px 6px;
-    letter-spacing: 0.04em;
+    font-family: var(--font-mono);
+    font-size: var(--fs-cap);
+    font-weight: 500;
+    color: var(--text-3);
+    padding: 6px 10px 8px;
+    letter-spacing: var(--tr-cap);
     text-transform: uppercase;
+    border-bottom: 1px solid var(--line-1);
+    margin-bottom: 4px;
   }
 
   .divider {
     height: 1px;
-    background: var(--border);
-    margin: 3px 0;
+    background: var(--line-1);
+    margin: 4px 0;
   }
 
   .item {
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 8px;
     width: 100%;
     text-align: left;
     padding: 6px 10px;
-    border-radius: 5px;
-    font-size: 12.5px;
-    color: var(--text-secondary);
-    transition: background 0.1s, color 0.1s;
-    font-family: ui-monospace, monospace;
+    border-radius: var(--r-sm);
+    font-size: var(--fs-sm);
+    color: var(--text-2);
+    transition: background var(--t-fast) var(--ease), color var(--t-fast) var(--ease);
+    font-family: var(--font-mono);
+    letter-spacing: 0;
   }
-  .item:hover { background: var(--bg-hover); color: var(--text-primary); }
+  .item:hover { background: var(--bg-4); color: var(--text-1); }
 
-  .item.back { color: var(--text-muted); font-family: inherit; font-size: 12px; }
-  .item.back:hover { color: var(--text-primary); }
+  .item.back { color: var(--text-3); font-family: var(--font-sans); font-size: var(--fs-xs); }
+  .item.back:hover { color: var(--text-1); }
 
-  .item.submenu { justify-content: space-between; font-family: inherit; }
+  .item.submenu { justify-content: space-between; font-family: var(--font-sans); }
 
   .item.danger { color: var(--danger); }
-  .item.danger:hover { background: var(--danger-bg); }
-  .item.logs { color: var(--text-muted); font-family: inherit; font-size: 12px; }
-  .item.logs:hover { color: var(--text-primary); }
+  .item.danger:hover { background: var(--danger-soft); }
+  .item.logs { color: var(--text-3); font-family: var(--font-sans); font-size: var(--fs-xs); }
+  .item.logs:hover { color: var(--text-1); }
 
   .confirm-section {
-    padding: 6px 8px 4px;
+    padding: 8px 8px 6px;
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 8px;
   }
-  .confirm-label { font-size: 12px; color: var(--text-secondary); padding: 0 2px; }
+  .confirm-label {
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-size: var(--fs-md);
+    color: var(--text-1);
+    padding: 0 2px;
+    letter-spacing: 0;
+  }
   .confirm-btns { display: flex; gap: 4px; }
   .confirm-yes {
     flex: 1;
-    padding: 5px;
-    border-radius: 5px;
-    font-size: 12px;
-    background: var(--danger-bg);
-    color: var(--danger);
-    border: 1px solid var(--danger-border);
-    transition: opacity 0.1s;
+    padding: 6px;
+    border-radius: var(--r-sm);
+    font-family: var(--font-mono);
+    font-size: var(--fs-cap);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    font-weight: 600;
+    background: var(--danger);
+    color: var(--bg-0);
+    transition: opacity var(--t-fast) var(--ease);
   }
-  .confirm-yes:hover { opacity: 0.8; }
+  .confirm-yes:hover { opacity: 0.86; }
   .confirm-no {
     flex: 1;
-    padding: 5px;
-    border-radius: 5px;
-    font-size: 12px;
-    background: var(--bg-active);
-    color: var(--text-secondary);
-    border: 1px solid var(--border-mid);
+    padding: 6px;
+    border-radius: var(--r-sm);
+    font-family: var(--font-mono);
+    font-size: var(--fs-cap);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    background: transparent;
+    color: var(--text-2);
+    border: 1px solid var(--line-2);
   }
-  .confirm-no:hover { color: var(--text-primary); }
+  .confirm-no:hover { color: var(--text-1); background: var(--bg-4); }
 </style>

@@ -6,6 +6,7 @@ export interface AgentSpec {
   room: string;
   model?: string;
   status: "starting" | "running" | "exited";
+  paused?: boolean;
 }
 
 export interface RoomSpec {

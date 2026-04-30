@@ -1,6 +1,7 @@
 import { writable } from "svelte/store";
 import { DEFAULT_ROOM } from "@shared/protocol.ts";
 import type { ServerMsg } from "@shared/protocol.ts";
+import { setAgentPaused } from "./agents.ts";
 
 export type ChatEntry =
   | { kind: "chat"; from: string; content: string; ts: number }
@@ -32,6 +33,15 @@ export function clearRoom(roomId: string) {
   });
 }
 
+export function dropRoom(roomId: string) {
+  messages.update((map) => {
+    if (!map.has(roomId)) return map;
+    const m = new Map(map);
+    m.delete(roomId);
+    return m;
+  });
+}
+
 export function dispatchServerMsg(msg: ServerMsg, _selfName: string) {
   const now = Date.now();
   if (msg.type === "message") {
@@ -48,5 +58,10 @@ export function dispatchServerMsg(msg: ServerMsg, _selfName: string) {
       info: msg.info,
       ts: msg.ts,
     });
+    if (msg.ok && (msg.op === "pause" || msg.op === "resume")) {
+      // ack.target identifies which agent acknowledged; the ack `from` field
+      // is set to the agent name in entry.ts:144 (target=name).
+      setAgentPaused(msg.target, msg.op === "pause");
+    }
   }
 }

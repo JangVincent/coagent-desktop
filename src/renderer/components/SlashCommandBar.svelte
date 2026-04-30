@@ -67,42 +67,52 @@
   .tab-bar {
     display: flex;
     align-items: center;
-    gap: 0;
-    padding: 0 14px;
-    border-top: 1px solid var(--border);
-    background: var(--bg-panel);
+    gap: 2px;
+    padding: 0 var(--s-4);
+    border-top: 1px solid var(--line-1);
+    background: var(--bg-2);
     overflow-x: auto;
     flex-shrink: 0;
+    min-height: 34px;
   }
 
   .tab {
     display: flex;
     align-items: center;
-    gap: 6px;
-    padding: 7px 12px;
-    font-size: 12px;
-    color: var(--text-muted);
-    border-bottom: 2px solid transparent;
+    gap: 8px;
+    padding: 8px 12px;
+    font-family: var(--font-mono);
+    font-size: var(--fs-sm);
+    color: var(--text-3);
+    border-bottom: 1.5px solid transparent;
     margin-bottom: -1px;
-    transition: color 0.1s, border-color 0.1s;
+    transition: color var(--t-fast) var(--ease),
+                border-color var(--t-fast) var(--ease),
+                background var(--t-fast) var(--ease);
     white-space: nowrap;
     flex-shrink: 0;
+    letter-spacing: 0;
+    position: relative;
   }
-  .tab:hover { color: var(--agent-color); }
+  .tab:hover { color: var(--agent-color); background: var(--bg-3); }
   .tab.active {
     color: var(--agent-color);
     border-bottom-color: var(--agent-color);
   }
 
   .tab-dot {
-    width: 7px; height: 7px;
+    width: 6px; height: 6px;
     border-radius: 50%;
     background: var(--agent-color);
     flex-shrink: 0;
-    opacity: 0.7;
-    transition: opacity 0.1s;
+    opacity: 0.55;
+    transition: opacity var(--t-fast) var(--ease),
+                box-shadow var(--t-fast) var(--ease);
   }
-  .tab.active .tab-dot { opacity: 1; }
+  .tab.active .tab-dot {
+    opacity: 1;
+    box-shadow: 0 0 8px var(--agent-color);
+  }
 
-  .tab-name { font-weight: 500; }
+  .tab-name { font-weight: 500; font-size: var(--fs-sm); }
 </style>

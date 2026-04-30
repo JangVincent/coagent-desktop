@@ -28,3 +28,12 @@ export function clearLogs(name: string) {
     return m;
   });
 }
+
+export function dropLogs(name: string) {
+  agentLogs.update((map) => {
+    if (!map.has(name)) return map;
+    const m = new Map(map);
+    m.delete(name);
+    return m;
+  });
+}

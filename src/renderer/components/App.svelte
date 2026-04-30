@@ -2,23 +2,18 @@
   import { onMount } from "svelte";
   import { initWsClient } from "../lib/ws-client.ts";
   import { selfName } from "../lib/stores/self.ts";
-  import { rooms, activeRoomId } from "../lib/stores/rooms.ts";
-  import { agents, updateAgentStatus } from "../lib/stores/agents.ts";
+  import { activeRoomId } from "../lib/stores/rooms.ts";
+  import { updateAgentStatus } from "../lib/stores/agents.ts";
   import { appendLog } from "../lib/stores/agent-logs.ts";
   import RoomSidebar from "./RoomSidebar.svelte";
+  import RoomTabs from "./RoomTabs.svelte";
   import ChatView from "./ChatView.svelte";
   import Composer from "./Composer.svelte";
   import SlashCommandBar from "./SlashCommandBar.svelte";
   import DropZone from "./DropZone.svelte";
-  import ThemeToggle from "./ThemeToggle.svelte";
 
   let ready = $state(false);
   let initError = $state<string | null>(null);
-
-  let activeRoom = $derived($rooms.find((r) => r.id === $activeRoomId));
-  let roomAgentCount = $derived(
-    $agents.filter((a) => a.room === $activeRoomId && a.status !== "exited").length
-  );
 
   onMount(async () => {
     try {
@@ -55,18 +50,7 @@
     <RoomSidebar />
 
     <main class="main-area">
-      <header class="chat-header">
-        <div class="header-left">
-          <span class="room-hash">#</span>
-          <span class="room-name">{activeRoom?.label ?? $activeRoomId}</span>
-          {#if roomAgentCount > 0}
-            <span class="room-meta">{roomAgentCount} agent{roomAgentCount > 1 ? "s" : ""}</span>
-          {/if}
-        </div>
-        <div class="header-right">
-          <ThemeToggle />
-        </div>
-      </header>
+      <RoomTabs />
 
       <DropZone>
         <ChatView roomId={$activeRoomId} />
@@ -78,6 +62,7 @@
 {:else}
   <div class="loading">
     <div class="spinner"></div>
+    <span class="loading-label">connecting</span>
   </div>
 {/if}
 
@@ -86,6 +71,8 @@
     display: flex;
     height: 100vh;
     overflow: hidden;
+    position: relative;
+    z-index: 1;
   }
 
   .main-area {
@@ -93,60 +80,32 @@
     display: flex;
     flex-direction: column;
     overflow: hidden;
-    background: var(--bg-base);
-  }
-
-  .chat-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0 16px;
-    border-bottom: 1px solid var(--border);
-    background: var(--bg-panel);
-    -webkit-app-region: drag;
-    height: 44px;
-    flex-shrink: 0;
-  }
-  .header-left {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    -webkit-app-region: no-drag;
-  }
-  .header-right {
-    -webkit-app-region: no-drag;
-  }
-  .room-hash {
-    font-size: 13px;
-    font-weight: 400;
-    color: var(--text-muted);
-    line-height: 1;
-  }
-  .room-name {
-    font-size: 13px;
-    font-weight: 600;
-    letter-spacing: -0.01em;
-  }
-  .room-meta {
-    font-size: 11px;
-    color: var(--text-muted);
-    padding: 1px 7px;
-    border-radius: 10px;
-    border: 1px solid var(--border-mid);
+    background: var(--bg-0);
+    min-width: 0;
   }
 
   .loading {
     height: 100vh;
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
+    gap: var(--s-3);
+    background: var(--bg-0);
   }
   .spinner {
-    width: 28px; height: 28px;
-    border: 2px solid var(--border-mid);
-    border-top-color: var(--text-secondary);
+    width: 18px; height: 18px;
+    border: 1.5px solid var(--line-2);
+    border-top-color: var(--accent);
     border-radius: 50%;
-    animation: spin 0.8s linear infinite;
+    animation: spin 0.9s var(--ease) infinite;
+  }
+  .loading-label {
+    font-family: var(--font-mono);
+    font-size: var(--fs-cap);
+    text-transform: uppercase;
+    letter-spacing: var(--tr-cap);
+    color: var(--text-3);
   }
   @keyframes spin { to { transform: rotate(360deg); } }
 
@@ -155,16 +114,34 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background: var(--bg-base);
+    background: var(--bg-0);
   }
   .error-box {
-    background: var(--danger-bg);
-    border: 1px solid var(--danger-border);
-    border-radius: 8px;
-    padding: 24px 28px;
+    background: var(--bg-2);
+    border: 1px solid var(--danger-line);
+    border-radius: var(--r-lg);
+    padding: 24px 26px;
     max-width: 560px;
     width: 90%;
+    box-shadow: var(--shadow-modal);
   }
-  .error-box strong { color: var(--danger); display: block; margin-bottom: 10px; font-size: 13px; font-weight: 600; }
-  .error-box pre { font-size: 11px; color: var(--text-secondary); white-space: pre-wrap; word-break: break-all; margin: 0; font-family: monospace; }
+  .error-box strong {
+    color: var(--danger);
+    display: block;
+    margin-bottom: 10px;
+    font-family: var(--font-mono);
+    font-size: var(--fs-cap);
+    text-transform: uppercase;
+    letter-spacing: var(--tr-cap);
+    font-weight: 600;
+  }
+  .error-box pre {
+    font-size: var(--fs-xs);
+    color: var(--text-2);
+    white-space: pre-wrap;
+    word-break: break-all;
+    margin: 0;
+    font-family: var(--font-mono);
+    line-height: 1.6;
+  }
 </style>

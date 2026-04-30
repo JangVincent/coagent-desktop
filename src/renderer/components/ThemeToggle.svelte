@@ -36,13 +36,16 @@
     justify-content: center;
     width: 28px;
     height: 28px;
-    border-radius: 6px;
-    color: var(--text-muted);
-    transition: color 0.15s, background 0.15s;
+    border-radius: var(--r-sm);
+    color: var(--text-3);
+    transition: color var(--t-fast) var(--ease),
+                background var(--t-fast) var(--ease),
+                transform var(--t-slow) var(--ease);
     flex-shrink: 0;
   }
   .toggle:hover {
-    color: var(--text-primary);
-    background: var(--bg-hover);
+    color: var(--accent);
+    background: var(--accent-soft);
   }
+  .toggle:active { transform: rotate(180deg); }
 </style>

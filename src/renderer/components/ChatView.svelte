@@ -74,17 +74,17 @@
   .chat-view {
     flex: 1;
     overflow-y: auto;
-    padding: 20px 24px;
+    padding: var(--s-6) var(--s-7);
     display: flex;
     flex-direction: column;
-    gap: 14px;
+    gap: var(--s-4);
   }
 
   .msg-wrap {
     display: flex;
     flex-direction: column;
-    gap: 3px;
-    max-width: 78%;
+    gap: 4px;
+    max-width: 76%;
     align-self: flex-start;
   }
   .msg-wrap-me {
@@ -93,55 +93,94 @@
   }
 
   .sender-name {
-    font-size: 11px;
-    font-weight: 600;
+    font-family: var(--font-mono);
+    font-size: var(--fs-cap);
+    font-weight: 500;
     padding-left: 2px;
-    letter-spacing: 0.01em;
+    letter-spacing: 0.04em;
+    text-transform: lowercase;
+    line-height: 1;
   }
 
   .bubble {
     padding: 10px 14px;
-    border-radius: 12px;
-    font-size: 13px;
-    line-height: 1.6;
+    border-radius: var(--r-lg);
+    font-size: var(--fs-md);
+    line-height: 1.62;
+    box-shadow: var(--shadow-sm);
+    animation: bubble-in 220ms var(--ease);
+  }
+  @keyframes bubble-in {
+    from { opacity: 0; transform: translateY(2px); }
+    to { opacity: 1; transform: translateY(0); }
   }
   .bubble-agent {
-    background: var(--agent-bubble-bg);
-    border: 1px solid var(--agent-bubble-border);
-    border-radius: 12px 12px 12px 3px;
+    background: var(--bubble-agent);
+    border: 1px solid var(--bubble-agent-line);
+    border-radius: var(--r-lg) var(--r-lg) var(--r-lg) 4px;
   }
   .bubble-me {
-    background: var(--agent-bubble-bg);
-    border: 1px solid var(--agent-bubble-border);
-    border-radius: 12px 12px 3px 12px;
+    background: var(--bubble-self);
+    border: 1px solid var(--bubble-self-line);
+    border-radius: var(--r-lg) var(--r-lg) 4px var(--r-lg);
   }
 
   .msg-time {
-    font-size: 10px;
-    color: var(--text-muted);
+    font-family: var(--font-mono);
+    font-size: var(--fs-cap);
+    color: var(--text-3);
     padding: 0 2px;
+    letter-spacing: 0;
+    font-variant-numeric: tabular-nums;
+    opacity: 0;
+    transition: opacity var(--t-fast) var(--ease);
   }
+  .msg-wrap:hover .msg-time { opacity: 1; }
 
   .error-notice {
     align-self: flex-start;
     display: flex;
     align-items: baseline;
-    gap: 8px;
-    padding: 7px 12px;
-    border-radius: 8px;
+    gap: 10px;
+    padding: 8px 0 8px 12px;
     border-left: 2px solid var(--danger);
-    background: var(--danger-bg);
-    font-size: 12px;
+    font-size: var(--fs-sm);
     max-width: 88%;
   }
-  .error-notice-name { font-weight: 600; font-size: 11px; flex-shrink: 0; }
-  .error-notice-text { color: var(--danger); font-family: ui-monospace, monospace; }
+  .error-notice-name {
+    font-family: var(--font-mono);
+    font-weight: 500;
+    font-size: var(--fs-cap);
+    text-transform: lowercase;
+    letter-spacing: 0.04em;
+    flex-shrink: 0;
+  }
+  .error-notice-text {
+    color: var(--danger);
+    font-family: var(--font-mono);
+    font-size: var(--fs-sm);
+    letter-spacing: 0;
+  }
 
   .system-msg {
     align-self: center;
-    font-size: 11px;
-    color: var(--text-muted);
-    letter-spacing: 0.03em;
+    font-family: var(--font-mono);
+    font-size: var(--fs-cap);
+    color: var(--text-3);
+    text-transform: uppercase;
+    letter-spacing: var(--tr-cap);
+    padding: 4px 0;
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .system-msg::before,
+  .system-msg::after {
+    content: "";
+    width: 24px;
+    height: 1px;
+    background: var(--line-2);
   }
 
   .ack-msg {
@@ -149,24 +188,40 @@
     display: flex;
     align-items: baseline;
     flex-wrap: wrap;
-    gap: 8px;
-    padding: 8px 12px;
-    border-radius: 8px;
-    border-left: 2px solid var(--ack-ok);
-    background: var(--ack-bg);
-    border-top: 1px solid var(--ack-border);
-    border-right: 1px solid var(--ack-border);
-    border-bottom: 1px solid var(--ack-border);
-    font-size: 12px;
-    font-family: ui-monospace, monospace;
+    gap: 10px;
+    padding: 6px 0 6px 14px;
+    border-left: 1.5px solid var(--accent-line);
+    font-family: var(--font-mono);
+    font-size: var(--fs-sm);
     max-width: 88%;
+    letter-spacing: 0;
   }
-  .ack-err { border-left-color: var(--danger); background: var(--danger-bg); }
-  .ack-op { color: var(--ack-op); font-weight: 700; flex-shrink: 0; }
-  .ack-info { color: var(--text-secondary); white-space: pre-wrap; word-break: break-word; flex: 1; }
+  .ack-msg::before {
+    content: "▸";
+    color: var(--accent);
+    font-size: 10px;
+    margin-right: -4px;
+    flex-shrink: 0;
+  }
+  .ack-err { border-left-color: var(--danger-line); }
+  .ack-err::before { color: var(--danger); content: "✗"; }
+  .ack-op {
+    color: var(--accent);
+    font-weight: 600;
+    flex-shrink: 0;
+  }
+  .ack-err .ack-op { color: var(--danger); }
+  .ack-info {
+    color: var(--text-2);
+    white-space: pre-wrap;
+    word-break: break-word;
+    flex: 1;
+  }
   .ack-err-label {
-    background: var(--danger-bg); color: var(--danger);
-    padding: 1px 6px; border-radius: 3px; font-size: 10px;
+    color: var(--danger);
+    font-size: var(--fs-cap);
+    text-transform: uppercase;
+    letter-spacing: var(--tr-cap);
   }
 
   .empty {
@@ -175,18 +230,31 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 6px;
-    color: var(--text-muted);
-    font-size: 13px;
+    gap: 14px;
+    color: var(--text-3);
     text-align: center;
   }
+  .empty p:first-child {
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-size: var(--fs-2xl);
+    line-height: 1.2;
+    color: var(--text-2);
+    letter-spacing: -0.01em;
+  }
+  .empty p:last-child {
+    font-family: var(--font-mono);
+    font-size: var(--fs-xs);
+    color: var(--text-3);
+  }
   .empty code {
-    background: var(--bg-active);
-    border: 1px solid var(--border-mid);
-    border-radius: 4px;
-    padding: 1px 6px;
-    font-family: monospace;
-    font-size: 12px;
-    color: var(--text-secondary);
+    background: var(--bg-3);
+    border: 1px solid var(--line-2);
+    border-radius: var(--r-sm);
+    padding: 1.5px 6px;
+    font-family: var(--font-mono);
+    font-size: var(--fs-xs);
+    color: var(--text-2);
+    letter-spacing: 0;
   }
 </style>

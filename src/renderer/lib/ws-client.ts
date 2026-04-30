@@ -77,10 +77,6 @@ export function sendControl(target: string, op: string, arg?: string) {
   }
 }
 
-export function isConnected(): boolean {
-  return ws?.readyState === WebSocket.OPEN;
-}
-
 // Disconnect with the old name and reconnect with the new one.
 // The hub releases the old name on close, so the new name can register cleanly.
 export function reconnectWithName(newName: string) {

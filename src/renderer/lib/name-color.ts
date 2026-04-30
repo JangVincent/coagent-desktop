@@ -1,8 +1,15 @@
+// Perceptually-uniform palette in OKLCH: same lightness + chroma,
+// only hue varies. Reads as a curated set, not random hex picks.
 const PALETTE = [
-  "#7a9fd4", "#6db89a", "#c49a6b", "#b87a8a", "#9b8ec4",
-  "#5fa8a8", "#c4826b", "#8aab6e", "#d4956a", "#7ab5c4",
-  "#a67ab8", "#6ba87a", "#c4b46a", "#7a8fc4", "#b8906b",
-  "#6ab8b0", "#c47a9b", "#8fc46a", "#6a8fb8", "#b8a06a",
+  "oklch(0.76 0.085 50)",   // sand
+  "oklch(0.76 0.085 90)",   // ochre
+  "oklch(0.76 0.085 130)",  // moss
+  "oklch(0.76 0.085 170)",  // sage
+  "oklch(0.76 0.085 210)",  // fog
+  "oklch(0.76 0.085 250)",  // dusk
+  "oklch(0.76 0.085 290)",  // plum
+  "oklch(0.76 0.085 330)",  // rosewood
+  "oklch(0.76 0.085 20)",   // terracotta
 ];
 
 export function nameColor(name: string): string {

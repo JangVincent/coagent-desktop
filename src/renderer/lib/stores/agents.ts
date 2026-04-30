@@ -24,6 +24,18 @@ export function addAgent(spec: AgentSpec) {
   agents.update((list) => [...list.filter((a) => a.name !== spec.name), spec]);
 }
 
-export function removeAgent(name: string) {
-  agents.update((list) => list.filter((a) => a.name !== name));
+export function dropAgents(names: Set<string>) {
+  if (names.size === 0) return;
+  agents.update((list) => list.filter((a) => !names.has(a.name)));
+}
+
+export function setAgentPaused(name: string, paused: boolean) {
+  agents.update((list) => {
+    const idx = list.findIndex((a) => a.name === name);
+    if (idx < 0) return list;
+    if (list[idx].paused === paused) return list;
+    const updated = [...list];
+    updated[idx] = { ...updated[idx], paused };
+    return updated;
+  });
 }

@@ -29,17 +29,28 @@
   .badge {
     display: inline-flex;
     align-items: center;
-    gap: 4px;
-    font-size: 10px;
-    color: var(--text-muted);
-    letter-spacing: 0.02em;
+    gap: 5px;
+    font-family: var(--font-mono);
+    font-size: var(--fs-cap);
+    color: var(--text-3);
+    letter-spacing: var(--tr-cap);
+    text-transform: uppercase;
+    animation: settle 220ms var(--ease);
   }
   .dot {
     width: 5px; height: 5px;
     border-radius: 50%;
-    background: var(--text-muted);
-    animation: blink 1.2s ease-in-out infinite;
+    background: var(--accent);
+    animation: pulse 1.4s var(--ease) infinite;
     flex-shrink: 0;
+    box-shadow: 0 0 6px var(--accent-line);
   }
-  @keyframes blink { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.35; transform: scale(0.7); }
+  }
+  @keyframes settle {
+    from { opacity: 0; transform: scale(0.85); }
+    to { opacity: 1; transform: scale(1); }
+  }
 </style>

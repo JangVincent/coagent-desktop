@@ -87,29 +87,36 @@
   .drop-overlay {
     position: absolute;
     inset: 0;
-    background: var(--bg-base);
-    opacity: 0.92;
+    background: color-mix(in oklch, var(--bg-0), transparent 6%);
+    backdrop-filter: blur(2px);
     display: flex;
     align-items: center;
     justify-content: center;
     z-index: 200;
     pointer-events: none;
-    border: 2px dashed var(--border-bright);
-    border-radius: 8px;
-    margin: 8px;
+    border: 1.5px dashed var(--accent-line);
+    border-radius: var(--r-lg);
+    margin: 12px;
+    animation: drop-in 180ms var(--ease);
+  }
+  @keyframes drop-in {
+    from { opacity: 0; transform: scale(0.99); }
+    to   { opacity: 1; transform: scale(1); }
   }
 
   .drop-hint {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 12px;
-    color: var(--text-secondary);
+    gap: 14px;
+    color: var(--accent);
   }
 
   .drop-hint span {
-    font-size: 14px;
-    font-weight: 500;
-    letter-spacing: -0.01em;
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-size: var(--fs-xl);
+    color: var(--text-1);
+    letter-spacing: -0.005em;
   }
 </style>

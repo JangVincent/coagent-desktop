@@ -57,7 +57,9 @@
   function detectPopup() {
     const val = textarea.value;
     const pos = textarea.selectionStart ?? val.length;
-    const atMatch = val.slice(0, pos).match(/@([A-Za-z][A-Za-z0-9_-]*)$/);
+    // Allow empty query right after `@` so the popup opens immediately.
+    // Anchor to start-of-string or whitespace so emails like foo@bar don't trigger.
+    const atMatch = val.slice(0, pos).match(/(?:^|\s)@([A-Za-z0-9_-]*)$/);
     if (atMatch) {
       showMention = true; showSlash = false;
       mentionQuery = atMatch[1]; mentionIdx = 0;
@@ -72,7 +74,7 @@
 
   function insertMention(name: string) {
     const pos = textarea.selectionStart ?? text.length;
-    text = text.slice(0, pos).replace(/@([A-Za-z][A-Za-z0-9_-]*)$/, `@${name} `) + text.slice(pos);
+    text = text.slice(0, pos).replace(/@([A-Za-z0-9_-]*)$/, `@${name} `) + text.slice(pos);
     showMention = false;
     textarea.focus();
   }
@@ -203,9 +205,9 @@
 <style>
   .composer-wrap {
     position: relative;
-    padding: 10px 16px 14px;
-    background: var(--bg-panel);
-    border-top: 1px solid var(--border);
+    padding: 10px var(--s-5) 14px;
+    background: var(--bg-2);
+    border-top: 1px solid var(--line-1);
     flex-shrink: 0;
   }
 
@@ -213,13 +215,17 @@
     display: flex;
     align-items: flex-end;
     gap: 8px;
-    background: var(--bg-input);
-    border: 1px solid var(--border-mid);
-    border-radius: 10px;
-    padding: 8px 10px;
-    transition: border-color 0.15s;
+    background: var(--bg-3);
+    border: 1px solid var(--line-2);
+    border-radius: var(--r-md);
+    padding: 9px 10px 9px 12px;
+    transition: border-color var(--t-fast) var(--ease),
+                box-shadow var(--t-fast) var(--ease);
   }
-  .input-row:focus-within { border-color: var(--border-bright); }
+  .input-row:focus-within {
+    border-color: var(--accent-line);
+    box-shadow: 0 0 0 3px var(--accent-soft);
+  }
 
   textarea {
     flex: 1;
@@ -227,16 +233,20 @@
     border: none;
     outline: none;
     resize: none;
-    color: var(--text-primary);
-    font: inherit;
-    font-size: 13px;
-    line-height: 1.55;
+    color: var(--text-1);
+    font-family: var(--font-sans);
+    font-size: var(--fs-md);
+    line-height: 1.6;
+    letter-spacing: var(--tr-tight);
     min-height: 22px;
     max-height: 180px;
     overflow-y: auto;
     padding: 0;
   }
-  textarea::placeholder { color: var(--text-placeholder); }
+  textarea::placeholder {
+    color: var(--text-4);
+    font-family: var(--font-sans);
+  }
   textarea:disabled { cursor: not-allowed; }
 
   .attach-btn {
@@ -244,61 +254,101 @@
     align-items: center;
     justify-content: center;
     width: 28px; height: 28px;
-    border-radius: 7px;
-    color: var(--text-muted);
+    border-radius: var(--r-sm);
+    color: var(--text-3);
     flex-shrink: 0;
-    transition: color 0.15s, background 0.15s;
+    transition: color var(--t-fast) var(--ease), background var(--t-fast) var(--ease);
   }
-  .attach-btn:hover { color: var(--text-primary); background: var(--bg-hover); }
+  .attach-btn:hover { color: var(--text-1); background: var(--bg-4); }
 
   .send-btn {
     width: 28px; height: 28px;
     display: flex; align-items: center; justify-content: center;
-    border-radius: 7px;
-    background: var(--bg-active);
-    border: 1px solid var(--border-bright);
-    color: var(--text-secondary);
+    border-radius: var(--r-sm);
+    background: var(--accent);
+    color: var(--bg-0);
     flex-shrink: 0;
-    transition: all 0.15s;
+    transition: opacity var(--t-fast) var(--ease),
+                transform var(--t-fast) var(--ease);
   }
   .send-btn:hover:not(:disabled) {
-    background: var(--text-primary);
-    color: var(--bg-base);
-    border-color: var(--text-primary);
+    background: var(--accent-strong);
+    transform: translateX(1px);
   }
-  .send-btn:disabled { opacity: 0.25; cursor: default; }
+  .send-btn:disabled {
+    opacity: 0.25;
+    cursor: default;
+    background: var(--bg-5);
+    color: var(--text-3);
+  }
 
   .popup {
     position: absolute;
-    bottom: calc(100% + 4px);
-    left: 16px; right: 16px;
-    background: var(--bg-panel);
-    border: 1px solid var(--border-bright);
-    border-radius: 8px;
+    bottom: calc(100% + 6px);
+    left: var(--s-5); right: var(--s-5);
+    background: var(--bg-2);
+    border: 1px solid var(--line-3);
+    border-radius: var(--r-md);
     overflow: hidden;
-    max-height: 200px;
+    max-height: 220px;
     overflow-y: auto;
-    box-shadow: var(--shadow);
+    box-shadow: var(--shadow-pop);
     z-index: 50;
+    animation: popup-in 140ms var(--ease);
+    padding: 4px;
+  }
+  @keyframes popup-in {
+    from { opacity: 0; transform: translateY(2px); }
+    to   { opacity: 1; transform: translateY(0); }
   }
   .popup-item {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 10px;
     width: 100%;
     text-align: left;
-    padding: 7px 12px;
-    font-size: 12.5px;
-    color: var(--text-secondary);
-    transition: background 0.1s;
+    padding: 6px 10px;
+    border-radius: var(--r-sm);
+    font-size: var(--fs-sm);
+    color: var(--text-2);
+    transition: background var(--t-fast) var(--ease), color var(--t-fast) var(--ease);
   }
-  .popup-item:hover, .popup-item.focused { background: var(--bg-active); color: var(--text-primary); }
+  .popup-item:hover {
+    background: var(--bg-4);
+    color: var(--text-1);
+  }
+  .popup-item.focused {
+    background: var(--accent-soft);
+    color: var(--text-1);
+    box-shadow: inset 2px 0 0 var(--accent);
+  }
   .name-dot {
-    width: 7px; height: 7px;
+    width: 8px; height: 8px;
     border-radius: 50%;
     flex-shrink: 0;
+    box-shadow: 0 0 0 0.5px rgba(255,255,255,0.06);
   }
-  .popup-at { font-weight: 700; color: var(--text-muted); }
-  .popup-slash { font-family: monospace; font-weight: 700; color: var(--text-primary); flex-shrink: 0; }
-  .popup-desc { color: var(--text-muted); font-size: 11px; }
+  .popup-at {
+    font-family: var(--font-mono);
+    font-weight: 500;
+    color: var(--text-3);
+    letter-spacing: 0;
+  }
+  .popup-item span:nth-child(3) {
+    font-family: var(--font-mono);
+    letter-spacing: 0;
+    font-size: var(--fs-sm);
+  }
+  .popup-slash {
+    font-family: var(--font-mono);
+    font-weight: 600;
+    color: var(--text-1);
+    flex-shrink: 0;
+    letter-spacing: 0;
+  }
+  .popup-desc {
+    color: var(--text-3);
+    font-size: var(--fs-xs);
+    font-family: var(--font-sans);
+  }
 </style>

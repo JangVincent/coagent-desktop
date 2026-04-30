@@ -1,6 +1,6 @@
-import { writable, get } from "svelte/store";
+import { writable } from "svelte/store";
 import { DEFAULT_ROOM } from "@shared/protocol.ts";
-import type { RoomSpec, AgentSpec } from "@shared/types.ts";
+import type { RoomSpec } from "@shared/types.ts";
 
 export type { RoomSpec };
 
@@ -17,14 +17,6 @@ export function createRoom(id: string, label: string) {
   });
 }
 
-export function deleteRoom(id: string) {
-  rooms.update((list) => list.filter((r) => r.id !== id));
-  // If deleted room was active, switch to default
-  if (get(activeRoomId) === id) {
-    activeRoomId.set(DEFAULT_ROOM);
-  }
-}
-
 export function renameRoom(id: string, label: string) {
   rooms.update((list) =>
     list.map((r) => (r.id === id ? { ...r, label } : r))
@@ -36,4 +28,9 @@ export function ensureRoom(id: string, label?: string) {
     if (list.find((r) => r.id === id)) return list;
     return [...list, { id, label: label ?? id }];
   });
+}
+
+export function deleteRoom(id: string) {
+  if (id === DEFAULT_ROOM) return;
+  rooms.update((list) => list.filter((r) => r.id !== id));
 }
