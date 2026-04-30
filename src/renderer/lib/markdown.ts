@@ -1,6 +1,7 @@
 import { marked, type Tokens } from "marked";
 import DOMPurify from "dompurify";
 import hljs from "highlight.js";
+import { nameColor } from "./name-color.ts";
 
 const COLLAPSE_LINES = 30;
 
@@ -31,7 +32,7 @@ const ALLOWED_SCHEMES = /^(https?|mailto):/i;
 /**
  * Highlight @mentions in text.
  * Runs BEFORE markdown parsing to avoid breaking inside code blocks.
- * If selfName is provided, mentions matching @selfName get a special class.
+ * Self-mentions use accent color, others use their nameColor.
  */
 function highlightMentions(text: string, selfName?: string): string {
   const selfLower = selfName?.toLowerCase();
@@ -40,10 +41,15 @@ function highlightMentions(text: string, selfName?: string): string {
     /(?<!`)`(?:[^`]|``)*`(?!`)|(@[a-zA-Z_][\w-]*)/g,
     (match, mention) => {
       if (mention) {
-        const name = mention.slice(1).toLowerCase(); // remove @ and lowercase
-        const isSelf = selfLower && name === selfLower;
-        const cls = isSelf ? "mention mention--self" : "mention";
-        return `<span class="${cls}">${mention}</span>`;
+        const name = mention.slice(1); // remove @
+        const isSelf = selfLower && name.toLowerCase() === selfLower;
+        if (isSelf) {
+          // Self-mention: use accent color (handled by CSS class)
+          return `<span class="mention mention--self">${mention}</span>`;
+        }
+        // Other mentions: use participant's nameColor with inline style
+        const color = nameColor(name);
+        return `<span class="mention" style="--mention-color: ${color}">${mention}</span>`;
       }
       return match; // preserve code spans
     }
@@ -61,7 +67,7 @@ export function renderMarkdown(content: string, selfName?: string): string {
       "table", "thead", "tbody", "tr", "th", "td",
       "hr",
     ],
-    ALLOWED_ATTR: ["href", "class", "id", "open"],
+    ALLOWED_ATTR: ["href", "class", "id", "open", "style"],
     ALLOW_DATA_ATTR: false,
     FORBID_CONTENTS: ["script", "style"],
     HOOK: undefined,

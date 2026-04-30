@@ -405,19 +405,18 @@ input, textarea {
 
 /* ── Mentions ────────────────────────────────────────────────────── */
 .markdown-body .mention {
-  color: var(--accent-strong);
-  background: var(--accent-soft);
+  /* Use participant's nameColor via CSS variable, fallback to accent */
+  --mention-color: var(--accent-strong);
+  color: var(--mention-color);
+  background: color-mix(in oklch, var(--mention-color) 15%, transparent);
   border-radius: var(--r-sm);
   padding: 0.05em 0.35em;
   font-weight: 500;
   white-space: nowrap;
 }
-/* Self-mention: uses a distinct highlight color (cyan/teal) */
+/* Self-mention: uses accent color (amber) */
 .markdown-body .mention--self {
-  color: oklch(0.75 0.12 195);
-  background: oklch(0.75 0.12 195 / 0.15);
-}
-[data-theme="light"] .markdown-body .mention--self {
-  color: oklch(0.45 0.13 195);
-  background: oklch(0.45 0.13 195 / 0.12);
+  --mention-color: var(--accent-strong);
+  color: var(--accent-strong);
+  background: var(--accent-soft);
 }
