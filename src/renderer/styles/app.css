@@ -412,3 +412,12 @@ input, textarea {
   font-weight: 500;
   white-space: nowrap;
 }
+/* Self-mention: uses a distinct highlight color (cyan/teal) */
+.markdown-body .mention--self {
+  color: oklch(0.75 0.12 195);
+  background: oklch(0.75 0.12 195 / 0.15);
+}
+[data-theme="light"] .markdown-body .mention--self {
+  color: oklch(0.45 0.13 195);
+  background: oklch(0.45 0.13 195 / 0.12);
+}

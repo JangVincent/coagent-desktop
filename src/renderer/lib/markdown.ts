@@ -31,23 +31,27 @@ const ALLOWED_SCHEMES = /^(https?|mailto):/i;
 /**
  * Highlight @mentions in text.
  * Runs BEFORE markdown parsing to avoid breaking inside code blocks.
+ * If selfName is provided, mentions matching @selfName get a special class.
  */
-function highlightMentions(text: string): string {
+function highlightMentions(text: string, selfName?: string): string {
+  const selfLower = selfName?.toLowerCase();
   // Match @word but not inside backticks (inline code or fenced blocks)
-  // We'll do a simple approach: replace @mentions outside of code spans
   return text.replace(
     /(?<!`)`(?:[^`]|``)*`(?!`)|(@[a-zA-Z_][\w-]*)/g,
     (match, mention) => {
       if (mention) {
-        return `<span class="mention">${mention}</span>`;
+        const name = mention.slice(1).toLowerCase(); // remove @ and lowercase
+        const isSelf = selfLower && name === selfLower;
+        const cls = isSelf ? "mention mention--self" : "mention";
+        return `<span class="${cls}">${mention}</span>`;
       }
       return match; // preserve code spans
     }
   );
 }
 
-export function renderMarkdown(content: string): string {
-  const withMentions = highlightMentions(content);
+export function renderMarkdown(content: string, selfName?: string): string {
+  const withMentions = highlightMentions(content, selfName);
   const raw = marked.parse(withMentions) as string;
   return DOMPurify.sanitize(raw, {
     ALLOWED_TAGS: [
