@@ -45,7 +45,9 @@ jobs:
           sudo apt-get install -y fakeroot dpkg libfuse2
 
       - name: Install dependencies
-        run: npm ci
+        # `npm install` (not `ci`) so node-24-generated lockfiles still work
+        # on the CI's node-20 npm — small repo, determinism is acceptable.
+        run: npm install --no-audit --no-fund
 
       - name: Build (renderer + agent-runtime)
         run: npm run build
