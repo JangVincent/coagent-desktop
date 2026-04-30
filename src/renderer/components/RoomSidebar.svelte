@@ -47,11 +47,32 @@
   // ── identity ─────────────────────────────────────────────────────
   let editingName = $state(false);
   let nameInput = $state("");
+  let showAbout = $state(false);
 
   function startEditName() {
     nameInput = $selfName;
     editingName = true;
   }
+
+  function toggleAbout(e: MouseEvent) {
+    e.stopPropagation();
+    showAbout = !showAbout;
+  }
+
+  function dismissAbout(e: MouseEvent) {
+    // Only dismiss when clicking outside the popover and the trigger
+    const target = e.target as HTMLElement;
+    if (!target.closest(".about-popover") && !target.closest(".identity-info")) {
+      showAbout = false;
+    }
+  }
+
+  $effect(() => {
+    if (showAbout) {
+      window.addEventListener("mousedown", dismissAbout);
+      return () => window.removeEventListener("mousedown", dismissAbout);
+    }
+  });
 
   async function saveName() {
     const trimmed = nameInput.trim();
@@ -374,11 +395,40 @@
         />
       </div>
     {:else}
-      <button class="row row--identity" onclick={startEditName} title="클릭해서 이름 변경">
-        <span class="name-avatar">{($selfName || "?")[0].toUpperCase()}</span>
-        <span class="row-label">{$selfName || "—"}</span>
-        <span class="identity-cue" aria-hidden="true">edit</span>
-      </button>
+      <div class="row row--identity">
+        <button class="identity-main" onclick={startEditName} title="이름 변경">
+          <span class="name-avatar">{($selfName || "?")[0].toUpperCase()}</span>
+          <span class="row-label">{$selfName || "—"}</span>
+          <span class="identity-cue" aria-hidden="true">
+            <svg width="11" height="11" viewBox="0 0 11 11" fill="none">
+              <path d="M1.5 8.5l1-3 5-5 2 2-5 5-3 1z" stroke="currentColor" stroke-width="1.1" stroke-linejoin="round"/>
+              <path d="M6.5 1.5l2 2" stroke="currentColor" stroke-width="1.1"/>
+            </svg>
+          </span>
+        </button>
+        <button
+          class="identity-info"
+          class:active={showAbout}
+          onclick={toggleAbout}
+          title="앱 정보"
+          aria-label="앱 정보"
+          aria-expanded={showAbout}
+        >
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+            <circle cx="6" cy="6" r="4.7" stroke="currentColor" stroke-width="1.1"/>
+            <path d="M6 5.2v3M6 3.6v.6" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+          </svg>
+        </button>
+        {#if showAbout}
+          <div class="about-popover" role="dialog" aria-label="앱 정보">
+            <div class="about-name">coagent</div>
+            <div class="about-version">v{__APP_VERSION__}</div>
+            <div class="about-divider" aria-hidden="true"></div>
+            <a class="about-link" href="https://github.com/JangVincent/coagent-app/releases" target="_blank" rel="noopener noreferrer">Releases ↗</a>
+            <a class="about-link" href="https://github.com/JangVincent/coagent-app" target="_blank" rel="noopener noreferrer">GitHub ↗</a>
+          </div>
+        {/if}
+      </div>
     {/if}
   </footer>
 </nav>
@@ -782,12 +832,24 @@
     border: none;
     color: inherit;
     border-radius: var(--r-sm);
-    padding: 0 8px;
+    padding: 0 4px 0 0;
+    gap: 4px;
+    position: relative;
+  }
+  .identity-main {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: center;
     gap: 10px;
+    height: var(--row-h);
+    padding: 0 8px;
+    border-radius: var(--r-sm);
+    text-align: left;
+    color: inherit;
     transition: background var(--t-fast) var(--ease);
   }
-  button.row--identity { text-align: left; }
-  button.row--identity:hover { background: var(--bg-4); }
+  .identity-main:hover { background: var(--bg-4); }
   .name-avatar {
     width: 22px; height: 22px;
     border-radius: var(--r-sm);
@@ -800,18 +862,76 @@
     color: var(--accent);
     letter-spacing: 0;
   }
-  .row--identity .row-label {
+  .identity-main .row-label {
     font-size: var(--fs-sm);
     color: var(--text-1);
     font-weight: 500;
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
   .identity-cue {
-    font-size: var(--fs-cap);
+    display: flex;
+    align-items: center;
+    justify-content: center;
     color: var(--text-4);
-    text-transform: uppercase;
-    letter-spacing: var(--tr-cap);
     opacity: 0;
-    transition: opacity var(--t-fast) var(--ease);
+    flex-shrink: 0;
+    transition: opacity var(--t-fast) var(--ease),
+                color var(--t-fast) var(--ease);
   }
-  button.row--identity:hover .identity-cue { opacity: 1; }
+  .identity-main:hover .identity-cue { opacity: 1; color: var(--text-2); }
+
+  .identity-info {
+    width: 22px; height: 22px;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: var(--r-sm);
+    color: var(--text-4);
+    flex-shrink: 0;
+    transition: color var(--t-fast) var(--ease),
+                background var(--t-fast) var(--ease);
+  }
+  .identity-info:hover { color: var(--text-1); background: var(--bg-4); }
+  .identity-info.active { color: var(--accent); background: var(--accent-soft); }
+
+  .about-popover {
+    position: absolute;
+    right: 4px;
+    bottom: calc(100% + 6px);
+    min-width: 160px;
+    padding: 10px 12px;
+    background: var(--bg-2);
+    border: 1px solid var(--line-2);
+    border-radius: var(--r-md, 6px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28),
+                0 1px 2px rgba(0, 0, 0, 0.18);
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    z-index: 50;
+  }
+  .about-name {
+    font-size: var(--fs-sm);
+    font-weight: 600;
+    color: var(--text-1);
+  }
+  .about-version {
+    font-size: var(--fs-xs);
+    color: var(--text-3);
+    font-variant-numeric: tabular-nums;
+  }
+  .about-divider {
+    height: 1px;
+    background: var(--line-1);
+    margin: 4px -4px;
+  }
+  .about-link {
+    font-size: var(--fs-xs);
+    color: var(--text-2);
+    text-decoration: none;
+    padding: 2px 0;
+    transition: color var(--t-fast) var(--ease);
+  }
+  .about-link:hover { color: var(--accent); }
 </style>

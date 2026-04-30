@@ -7,4 +7,6 @@ declare global {
   interface Window {
     coagent: CoagentAPI;
   }
+  // Injected at build time by electron-vite (see electron.vite.config.ts).
+  const __APP_VERSION__: string;
 }

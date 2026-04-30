@@ -1,6 +1,9 @@
 import { defineConfig, externalizeDepsPlugin } from "electron-vite";
 import { svelte } from "@sveltejs/vite-plugin-svelte";
 import { resolve } from "path";
+import { readFileSync } from "fs";
+
+const pkg = JSON.parse(readFileSync(resolve("package.json"), "utf-8"));
 
 export default defineConfig({
   main: {
@@ -46,6 +49,9 @@ export default defineConfig({
       },
     },
     plugins: [svelte()],
+    define: {
+      __APP_VERSION__: JSON.stringify(pkg.version),
+    },
     build: {
       outDir: "dist/renderer",
       rollupOptions: {
