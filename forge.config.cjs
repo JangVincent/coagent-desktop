@@ -69,6 +69,9 @@ module.exports = {
       name: "@electron-forge/maker-deb",
       config: {
         options: {
+          // Must match packagerConfig.executableName above; otherwise the
+          // maker defaults to package.json `name` and can't find the binary.
+          bin: "coagent",
           ...(has(ICON_PNG) ? { icon: ICON_PNG } : {}),
           categories: ["Development", "Utility"],
           section: "devel",
