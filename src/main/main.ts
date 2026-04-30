@@ -1,12 +1,32 @@
 import { app, BrowserWindow, shell, nativeImage } from "electron";
 import path from "node:path";
 import fs from "node:fs";
+import { updateElectronApp } from "update-electron-app";
+import squirrelStartup from "electron-squirrel-startup";
 import { fixPath } from "./path-fix.ts";
 import { startHub } from "./hub/start-hub.ts";
 import { initAgentManager, killAllAgents } from "./agent-manager.ts";
 import { registerIpc } from "./ipc.ts";
 
+// Windows Squirrel installer hook — quits immediately when invoked by the
+// installer/updater for shortcut creation, etc. Must run before any UI work.
+if (squirrelStartup) app.quit();
+
 fixPath();
+
+// Auto-update via update.electronjs.org (free, GitHub Releases backed).
+// macOS auto-update needs code signing — we don't sign, so skip there.
+if (app.isPackaged && process.platform !== "darwin") {
+  try {
+    updateElectronApp({
+      repo: "JangVincent/coagent-desktop",
+      updateInterval: "1 hour",
+      logger: console,
+    });
+  } catch (e) {
+    console.warn("[updater] failed to initialize:", e);
+  }
+}
 
 let mainWindow: BrowserWindow | null = null;
 

@@ -32,6 +32,7 @@
     "electron-squirrel-startup": "^1.0.1",
     "highlight.js": "^11.11.1",
     "marked": "^15.0.12",
+    "update-electron-app": "^3.1.2",
     "ws": "^8.20.0",
     "zod": "^3.23.8"
   },
