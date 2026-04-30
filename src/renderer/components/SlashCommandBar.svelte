@@ -36,10 +36,10 @@
       <button
         class="tab"
         class:active={a.name === activeAgent}
-        onclick={() => { selectedAgent = a.name; }}
+        onclick={(e) => { selectedAgent = a.name; openMenu(e, a.name); }}
         oncontextmenu={(e) => openMenu(e, a.name)}
         style:--agent-color={nameColor(a.name)}
-        title="Right-click for options"
+        title="Click for options"
       >
         <span class="tab-dot"></span>
         <span class="tab-name">{a.name}</span>

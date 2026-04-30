@@ -5,7 +5,7 @@ export type CommandDef = {
   args: string;
   desc: string;
   op?: ControlOp;
-  local?: "quit";
+  local?: "quit" | "kill-all";
 };
 
 export const COMMANDS: CommandDef[] = [
@@ -18,6 +18,7 @@ export const COMMANDS: CommandDef[] = [
   { name: "pause", args: "<agent|all>", desc: "Stop processing messages", op: "pause" },
   { name: "resume", args: "<agent|all>", desc: "Resume a paused agent", op: "resume" },
   { name: "kill", args: "<agent|all>", desc: "Terminate an agent process", op: "kill" },
+  { name: "kill-all", args: "", desc: "Kill all agents in this room", local: "kill-all" },
 ];
 
 export function longestCommonPrefix(strs: string[]): string {

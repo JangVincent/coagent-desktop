@@ -112,11 +112,26 @@
     return m ? { op: m[1], target: m[2], arg: m[3] } : null;
   }
 
+  async function killAllInRoom() {
+    const targets = $agents.filter((a) => a.room === roomId && a.status !== "exited");
+    await Promise.all(targets.map((a) => window.coagent.killAgent(a.name)));
+  }
+
   function submit() {
     const val = text.trim();
     if (!val) return;
+
+    // Handle local commands first
+    if (val === "/kill-all") {
+      killAllInRoom();
+      text = "";
+      showSlash = false;
+      textarea.style.height = "auto";
+      return;
+    }
+
     // Only treat as slash command if it matches /command format (not file paths like /Users/...)
-    const slashMatch = val.match(/^\/([a-z]+)\s+/i);
+    const slashMatch = val.match(/^\/([a-z-]+)\s+/i);
     const isSlashCmd = slashMatch && COMMANDS.some((c) => c.name === slashMatch[1].toLowerCase());
     if (isSlashCmd) {
       const p = parseSlash(val);
