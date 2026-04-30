@@ -25,10 +25,25 @@ module.exports = {
       ? { icon: ICON_BASE }
       : {}),
     asar: true,
-    // The agent-runtime is built separately by esbuild → out/agent-runtime/entry.cjs.
+    // We build with electron-vite (npm run build) before forge packages,
+    // so exclude source/config so the .asar only ships compiled output.
+    ignore: [
+      /^\/src($|\/)/,
+      /^\/scripts($|\/)/,
+      /^\/\.github($|\/)/,
+      /^\/\.vscode($|\/)/,
+      /^\/electron\.vite\.config\.ts$/,
+      /^\/tsconfig.*\.json$/,
+      /^\/forge\.config\.cjs$/,
+      /^\/plan\.md$/,
+      /^\/README\.md$/,
+      /^\/\.gitignore$/,
+      /^\/assets\/icon\.src\.png$/,
+    ],
+    // The agent-runtime is built separately by esbuild → dist/agent-runtime/entry.cjs.
     // Ship it as an extraResource so app.isPackaged path resolves to
     // process.resourcesPath/agent-runtime/entry.cjs (see src/main/agent-manager.ts).
-    extraResource: ["./out/agent-runtime"],
+    extraResource: ["./dist/agent-runtime"],
   },
   rebuildConfig: {},
   makers: [
@@ -75,18 +90,10 @@ module.exports = {
     },
   ],
   plugins: [
-    {
-      name: "@electron-forge/plugin-vite",
-      config: {
-        build: [
-          { entry: "src/main/main.ts", config: "electron.vite.config.ts", target: "main" },
-          { entry: "src/main/preload.ts", config: "electron.vite.config.ts", target: "preload" },
-        ],
-        renderer: [
-          { name: "main_window", config: "electron.vite.config.ts", target: "renderer" },
-        ],
-      },
-    },
+    // NOTE: we intentionally do NOT use @electron-forge/plugin-vite.
+    // It expects a vanilla vite config, but ours is the electron-vite
+    // shape (main/preload/renderer keys). Build is handled upstream by
+    // `npm run build` (electron-vite); forge only packages out/.
     new FusesPlugin({
       version: FuseVersion.V1,
       [FuseV1Options.RunAsNode]: false,

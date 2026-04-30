@@ -29,7 +29,7 @@ function agentEntryPath(): string {
   if (app.isPackaged) {
     return path.join(process.resourcesPath, "agent-runtime", "entry.cjs");
   }
-  return path.join(app.getAppPath(), "out", "agent-runtime", "entry.cjs");
+  return path.join(app.getAppPath(), "dist", "agent-runtime", "entry.cjs");
 }
 
 export function spawnAgent(spec: {

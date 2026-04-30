@@ -1,5 +1,6 @@
 node_modules/
 out/
 dist/
+.forge/
 .DS_Store
 *.log

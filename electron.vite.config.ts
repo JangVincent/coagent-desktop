@@ -11,6 +11,7 @@ export default defineConfig({
       },
     },
     build: {
+      outDir: "dist/main",
       lib: {
         entry: resolve("src/main/main.ts"),
         formats: ["cjs"],
@@ -25,6 +26,7 @@ export default defineConfig({
   preload: {
     plugins: [externalizeDepsPlugin()],
     build: {
+      outDir: "dist/preload",
       lib: {
         entry: resolve("src/main/preload.ts"),
         formats: ["cjs"],
@@ -45,6 +47,7 @@ export default defineConfig({
     },
     plugins: [svelte()],
     build: {
+      outDir: "dist/renderer",
       rollupOptions: {
         input: {
           index: resolve("src/renderer/index.html"),
