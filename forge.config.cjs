@@ -24,7 +24,13 @@ module.exports = {
     ...(has(`${ICON_BASE}.icns`) || has(`${ICON_BASE}.ico`)
       ? { icon: ICON_BASE }
       : {}),
-    asar: true,
+    // The Claude Agent SDK ships its own cli.js, which the SDK launches via
+    // child_process.spawn(). Files inside asar can't be exec'd by the OS, so
+    // the SDK package must be unpacked or every turn fails with "Claude Code
+    // process exited with code 1" in packaged builds.
+    asar: {
+      unpack: "**/node_modules/@anthropic-ai/claude-agent-sdk/**",
+    },
     // We build with electron-vite (npm run build) before forge packages,
     // so exclude source/config so the .asar only ships compiled output.
     ignore: [
