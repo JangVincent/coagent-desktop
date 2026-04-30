@@ -130,6 +130,8 @@ let permissionMode: PermissionMode = hubIsLocal ? "bypassPermissions" : "acceptE
 
 function setSessionId(id: string | null) {
   sessionId = id;
+  // Report session ID to main process via stdout (parsed by agent-manager.ts)
+  if (id) console.log(`[${name}] __SESSION_ID__:${id}`);
 }
 
 let lastActivity: { kind: ActivityKind; tool?: string } | null = null;

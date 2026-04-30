@@ -1,6 +1,6 @@
 <script lang="ts">
   import { rooms, activeRoomId, createRoom, ensureRoom, renameRoom, deleteRoom } from "../lib/stores/rooms.ts";
-  import { agents, addAgent, dropAgents } from "../lib/stores/agents.ts";
+  import { agents, addAgent, dropAgents, renameAgentInStore } from "../lib/stores/agents.ts";
   import { dropRoom } from "../lib/stores/messages.ts";
   import { dropLogs } from "../lib/stores/agent-logs.ts";
   import { openTab, closeTab } from "../lib/stores/room-tabs.ts";
@@ -13,6 +13,21 @@
   import { DEFAULT_ROOM } from "@shared/protocol.ts";
 
   let showNewRoom = $state(false);
+
+  // Track which rooms have their agent list expanded (default: all collapsed)
+  let expandedRooms = $state<Set<string>>(new Set());
+
+  function toggleRoomExpanded(roomId: string) {
+    const next = new Set(expandedRooms);
+    if (next.has(roomId)) next.delete(roomId);
+    else next.add(roomId);
+    expandedRooms = next;
+  }
+
+  function autofocusEl(node: HTMLInputElement) {
+    node.focus();
+    node.select();
+  }
 
   // ── room rename ──────────────────────────────────────────────────
   let editingRoomId = $state<string | null>(null);
@@ -68,6 +83,10 @@
 
   async function addAgentToRoom(roomId: string) {
     addTargetRoom = roomId;
+    // Auto-expand the room when adding an agent so the form is visible
+    if (!expandedRooms.has(roomId)) {
+      expandedRooms = new Set(expandedRooms).add(roomId);
+    }
     const result = await window.coagent.pickFolder();
     if (!result.path) return;
     pendingCwd = result.path;
@@ -104,6 +123,32 @@
     return $agents.filter((a) => a.room === roomId);
   }
 
+  // ── agent rename ────────────────────────────────────────────────
+  let editingAgentName = $state<string | null>(null);
+  let agentRenameInput = $state("");
+
+  function startRenameAgent(name: string) {
+    editingAgentName = name;
+    agentRenameInput = name;
+  }
+
+  async function saveAgentName() {
+    const oldName = editingAgentName;
+    const newName = agentRenameInput.trim();
+    editingAgentName = null;
+    if (!oldName || !newName || newName === oldName) return;
+    if ($agents.some((a) => a.name === newName)) {
+      console.warn(`agent name '${newName}' already taken`);
+      return;
+    }
+    const res = await window.coagent.renameAgent(oldName, newName);
+    if (!res.ok) {
+      console.error("rename failed:", res.error);
+      return;
+    }
+    renameAgentInStore(oldName, newName);
+  }
+
   // ── room delete ──────────────────────────────────────────────────
   let confirmDeleteRoomId = $state<string | null>(null);
 
@@ -132,43 +177,53 @@
 </script>
 
 <nav class="sidebar" aria-label="Rooms">
-  <div class="sidebar-header">
+  <header class="sidebar-header">
     <span class="sidebar-title">Workspace</span>
-    <button class="icon-btn" onclick={() => { showNewRoom = !showNewRoom; newRoomLabel = ""; }} title="New room">
-      <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-        <path d="M6 1v10M1 6h10" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+    <button
+      class="btn-ghost"
+      class:active={showNewRoom}
+      onclick={() => { showNewRoom = !showNewRoom; newRoomLabel = ""; }}
+      title="New room"
+      aria-label="New room"
+    >
+      <svg width="11" height="11" viewBox="0 0 11 11" fill="none">
+        <path d="M5.5 1.5v8M1.5 5.5h8" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
       </svg>
     </button>
-  </div>
+  </header>
 
   {#if showNewRoom}
-    <div class="inline-form">
+    <div class="row row--input">
+      <span class="row-rail" aria-hidden="true">+</span>
       <input
-        class="text-input"
+        class="row-input"
         bind:value={newRoomLabel}
         placeholder="room-name"
+        use:autofocusEl
         onkeydown={(e) => {
           if (e.key === "Enter") submitNewRoom();
           if (e.key === "Escape") { showNewRoom = false; }
         }}
       />
-      <button class="submit-btn" onclick={submitNewRoom}>Create</button>
+      <button class="row-submit" onclick={submitNewRoom}>create</button>
     </div>
   {/if}
 
-  <div class="room-list" role="listbox" style="flex:1;overflow-y:auto">
+  <div class="room-list" role="listbox">
     {#each $rooms as room (room.id)}
       {@const roomAgents = agentsInRoom(room.id)}
       {@const isActive = $activeRoomId === room.id}
+      {@const isExpanded = expandedRooms.has(room.id)}
       {@const runningCount = roomAgents.filter(a => a.status !== "exited").length}
 
-      <div class="room-section">
+      <section class="room-section" class:active={isActive} class:expanded={isExpanded}>
         {#if editingRoomId === room.id}
-          <div class="room-row active">
-            <span class="room-chevron">▾</span>
+          <div class="row row--room row--editing">
+            <span class="row-chevron" aria-hidden="true">▾</span>
             <input
-              class="room-label-input"
+              class="row-input row-input--inline"
               bind:value={roomLabelInput}
+              use:autofocusEl
               onkeydown={(e) => {
                 if (e.key === "Enter") saveRoomName();
                 if (e.key === "Escape") editingRoomId = null;
@@ -178,112 +233,154 @@
           </div>
         {:else if confirmDeleteRoomId === room.id}
           {@const liveCount = roomAgents.filter((a) => a.status !== "exited").length}
-          <div class="room-row confirm">
-            <span class="room-chevron">▾</span>
+          <div class="row row--room row--confirm">
+            <span class="row-chevron danger" aria-hidden="true">!</span>
             <span class="confirm-text">
-              Delete #{room.label}{liveCount > 0 ? ` (kill ${liveCount} agent${liveCount > 1 ? "s" : ""})` : ""}?
+              delete #{room.label}{liveCount > 0 ? ` · kill ${liveCount}` : ""}?
             </span>
             <button
-              class="confirm-btn yes"
+              class="row-action danger"
               onclick={(e) => { e.stopPropagation(); performDeleteRoom(room.id); }}
-              title="Delete"
-            >Delete</button>
+              title="Confirm delete"
+            >yes</button>
             <button
-              class="confirm-btn no"
+              class="row-action ghost"
               onclick={(e) => { e.stopPropagation(); confirmDeleteRoomId = null; }}
               title="Cancel"
-            >Cancel</button>
+            >no</button>
           </div>
         {:else}
-          <div class="room-row-wrap" class:active={isActive}>
+          <div class="row row--room" class:is-active={isActive}>
             <button
-              class="room-row"
-              class:active={isActive}
+              class="row-chevron-btn"
+              onclick={(e) => { e.stopPropagation(); toggleRoomExpanded(room.id); }}
+              aria-label={isExpanded ? "Collapse room" : "Expand room"}
+              title={isExpanded ? "Collapse" : "Expand"}
+            >
+              <span class="row-chevron">{isExpanded ? "▾" : "▸"}</span>
+            </button>
+            <button
+              class="row-body"
               onclick={() => openTab(room.id)}
               ondblclick={() => startRenameRoom(room.id, room.label)}
               role="option"
               aria-selected={isActive}
               title="Double-click to rename"
             >
-              <span class="room-chevron">{isActive ? "▾" : "▸"}</span>
-              <span class="room-label"># {room.label}</span>
+              <span class="row-hash">#</span>
+              <span class="row-label">{room.label}</span>
               {#if runningCount > 0}
                 <span class="count-badge">{runningCount}</span>
               {/if}
             </button>
-            {#if room.id !== DEFAULT_ROOM}
+            <div class="row-actions">
               <button
-                class="room-delete"
-                onclick={(e) => { e.stopPropagation(); confirmDeleteRoomId = room.id; }}
-                title="Delete room"
-                aria-label="Delete room"
+                class="btn-ghost"
+                onclick={(e) => { e.stopPropagation(); addAgentToRoom(room.id); }}
+                title="Add agent"
+                aria-label="Add agent"
               >
                 <svg width="11" height="11" viewBox="0 0 11 11" fill="none">
-                  <path d="M2 3h7M4.5 3V2a1 1 0 011-1h0a1 1 0 011 1v1M3 3l.5 6.5a1 1 0 001 .9h2a1 1 0 001-.9L8 3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="M5.5 1.5v8M1.5 5.5h8" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
                 </svg>
               </button>
-            {/if}
+              {#if room.id !== DEFAULT_ROOM}
+                <button
+                  class="btn-ghost danger"
+                  onclick={(e) => { e.stopPropagation(); confirmDeleteRoomId = room.id; }}
+                  title="Delete room"
+                  aria-label="Delete room"
+                >
+                  <svg width="11" height="11" viewBox="0 0 11 11" fill="none">
+                    <path d="M2 3h7M4.5 3V2a1 1 0 011-1h0a1 1 0 011 1v1M3 3l.5 6.5a1 1 0 001 .9h2a1 1 0 001-.9L8 3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </button>
+              {/if}
+            </div>
           </div>
         {/if}
 
-        {#if isActive}
+        {#if isExpanded}
           <div class="agent-section">
             {#each roomAgents as agent (agent.name)}
-              <div class="agent-row" class:exited={agent.status === "exited"}>
-                <span class="dot" class:running={agent.status === "running"} class:starting={agent.status === "starting"}></span>
-                <span class="agent-name">{agent.name}</span>
+              <div class="row row--agent" class:exited={agent.status === "exited"}>
+                <span class="row-guide" aria-hidden="true"></span>
+                <span class="dot" class:running={agent.status === "running"} class:starting={agent.status === "starting"} aria-hidden="true"></span>
+                {#if editingAgentName === agent.name}
+                  <input
+                    class="row-input row-input--inline"
+                    bind:value={agentRenameInput}
+                    onkeydown={(e) => {
+                      if (e.key === "Enter") saveAgentName();
+                      if (e.key === "Escape") editingAgentName = null;
+                    }}
+                    onblur={saveAgentName}
+                    use:autofocusEl
+                  />
+                {:else}
+                  <button
+                    class="agent-name"
+                    ondblclick={() => agent.status === "running" && startRenameAgent(agent.name)}
+                    title="Double-click to rename"
+                  >{agent.name}</button>
+                {/if}
                 <span class="agent-activity"><ActivityBadge agentName={agent.name} /></span>
               </div>
             {/each}
 
-            {#if showAgentName && addTargetRoom === room.id}
-              <div class="agent-name-form">
-                <p class="agent-name-label">Agent name</p>
-                <div class="inline-form">
-                  <input
-                    class="text-input"
-                    bind:value={agentNameInput}
-                    placeholder="agent-name"
-                    onkeydown={(e) => {
-                      if (e.key === "Enter") confirmAgentName();
-                      if (e.key === "Escape") showAgentName = false;
-                    }}
-                  />
-                  <button class="submit-btn" onclick={confirmAgentName}>Add</button>
-                </div>
+            {#if roomAgents.length === 0 && !(showAgentName && addTargetRoom === room.id)}
+              <div class="row row--agent row--empty">
+                <span class="row-guide" aria-hidden="true"></span>
+                <span class="empty-text">no agents</span>
               </div>
-            {:else}
-              <button class="add-agent-row" onclick={() => addAgentToRoom(room.id)}>
-                <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
-                  <path d="M5 1v8M1 5h8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-                </svg>
-                Add agent
-              </button>
+            {/if}
+
+            {#if showAgentName && addTargetRoom === room.id}
+              <div class="row row--agent row--input">
+                <span class="row-guide" aria-hidden="true"></span>
+                <span class="row-rail row-rail--small" aria-hidden="true">+</span>
+                <input
+                  class="row-input"
+                  bind:value={agentNameInput}
+                  placeholder="agent-name"
+                  use:autofocusEl
+                  onkeydown={(e) => {
+                    if (e.key === "Enter") confirmAgentName();
+                    if (e.key === "Escape") showAgentName = false;
+                  }}
+                />
+                <button class="row-submit" onclick={confirmAgentName}>add</button>
+              </div>
             {/if}
           </div>
         {/if}
-      </div>
+      </section>
     {/each}
   </div>
 
-  <div class="identity">
+  <footer class="identity">
     {#if editingName}
-      <input
-        class="name-input"
-        bind:value={nameInput}
-        onkeydown={(e) => {
-          if (e.key === "Enter") saveName();
-          if (e.key === "Escape") editingName = false;
-        }}
-        onblur={saveName}
-      />
+      <div class="row row--identity row--editing">
+        <span class="name-avatar">{(nameInput || "?")[0].toUpperCase()}</span>
+        <input
+          class="row-input row-input--inline"
+          bind:value={nameInput}
+          use:autofocusEl
+          onkeydown={(e) => {
+            if (e.key === "Enter") saveName();
+            if (e.key === "Escape") editingName = false;
+          }}
+          onblur={saveName}
+        />
+      </div>
     {:else}
-      <button class="name-btn" onclick={startEditName} title="클릭해서 이름 변경">
+      <button class="row row--identity" onclick={startEditName} title="클릭해서 이름 변경">
         <span class="name-avatar">{($selfName || "?")[0].toUpperCase()}</span>
-        <span class="name-text">{$selfName || "—"}</span>
+        <span class="row-label">{$selfName || "—"}</span>
+        <span class="identity-cue" aria-hidden="true">edit</span>
       </button>
     {/if}
-  </div>
+  </footer>
 </nav>
 
 {#if addState === "picking-session"}
@@ -297,190 +394,151 @@
 {/if}
 
 <style>
+  /* ── geometry tokens (component-local) ──────────────────────────── */
   .sidebar {
-    width: 220px;
+    /* every interactive slot in this column shares these */
+    --row-h: 30px;
+    --gutter-x: 10px;
+    --rail-w: 2px;            /* active accent rail */
+    --chevron-col: 18px;      /* chevron column width = nesting indent */
+    --guide-x: calc(var(--gutter-x) + 8px); /* x of vertical guide line */
+
+    width: 224px;
     flex-shrink: 0;
     border-right: 1px solid var(--line-1);
     background: var(--bg-1);
     display: flex;
     flex-direction: column;
     overflow: hidden;
+    font-family: var(--font-mono);
   }
 
+  /* ── header ──────────────────────────────────────────────────────── */
   .sidebar-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: var(--sidebar-top-padding, 12px) var(--s-4) 12px;
+    height: calc(var(--sidebar-top-padding, 12px) + 28px);
+    padding: var(--sidebar-top-padding, 12px) var(--gutter-x) 6px;
+    border-bottom: 1px solid var(--line-1);
     -webkit-app-region: drag;
     flex-shrink: 0;
   }
   .sidebar-title {
-    font-family: var(--font-mono);
     font-size: var(--fs-cap);
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: var(--tr-cap);
     color: var(--text-3);
+    /* tiny tick mark before the label, like a section register */
+    position: relative;
+    padding-left: 12px;
   }
-  .icon-btn {
+  .sidebar-title::before {
+    content: "";
+    position: absolute;
+    left: 0; top: 50%;
+    width: 6px; height: 1px;
+    background: var(--accent);
+    transform: translateY(-0.5px);
+  }
+
+  /* ── shared icon button ─────────────────────────────────────────── */
+  .btn-ghost {
     width: 22px; height: 22px;
     display: flex; align-items: center; justify-content: center;
     border-radius: var(--r-sm);
     color: var(--text-3);
     -webkit-app-region: no-drag;
-    transition: color var(--t-fast) var(--ease), background var(--t-fast) var(--ease);
+    transition: color var(--t-fast) var(--ease),
+                background var(--t-fast) var(--ease),
+                opacity var(--t-fast) var(--ease);
   }
-  .icon-btn:hover { color: var(--text-1); background: var(--bg-4); }
+  .btn-ghost:hover { color: var(--text-1); background: var(--bg-4); }
+  .btn-ghost.active { color: var(--accent); background: var(--accent-soft); }
+  .btn-ghost.danger:hover { color: var(--danger); background: var(--danger-soft); }
 
-  .inline-form {
-    display: flex;
-    gap: var(--s-1);
-    padding: 0 var(--s-2) var(--s-2);
-  }
-
-  .agent-name-form {
-    margin: 6px var(--s-2) 4px;
-    border: 1px solid var(--line-2);
-    border-radius: var(--r);
-    overflow: hidden;
-    background: var(--bg-2);
-  }
-  .agent-name-label {
-    font-family: var(--font-mono);
-    font-size: var(--fs-cap);
-    font-weight: 500;
-    text-transform: uppercase;
-    letter-spacing: var(--tr-cap);
-    color: var(--text-3);
-    padding: 8px 10px 4px;
-  }
-  .agent-name-form .inline-form {
-    padding: 0 var(--s-2) var(--s-2);
-  }
-  .text-input {
+  /* ── room list scroller ─────────────────────────────────────────── */
+  .room-list {
     flex: 1;
-    min-width: 0;
-    background: var(--bg-3);
-    border: 1px solid var(--line-2);
-    border-radius: var(--r-sm);
-    padding: 5px 8px;
-    font-family: var(--font-mono);
-    font-size: var(--fs-xs);
-    color: var(--text-1);
-    outline: none;
-    transition: border-color var(--t-fast) var(--ease);
+    overflow-y: auto;
+    padding: 6px 0;
   }
-  .text-input::placeholder { color: var(--text-4); }
-  .text-input:focus { border-color: var(--accent-line); }
-  .submit-btn {
-    padding: 5px 10px;
-    border-radius: var(--r-sm);
-    font-family: var(--font-mono);
-    font-size: var(--fs-cap);
-    font-weight: 500;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    background: var(--accent-soft);
-    border: 1px solid var(--accent-line);
-    color: var(--accent-strong);
-    flex-shrink: 0;
-    transition: background var(--t-fast) var(--ease);
-  }
-  .submit-btn:hover { background: var(--accent-line); color: var(--text-1); }
 
-  .room-list { flex: 1; overflow-y: auto; padding: 4px 0 var(--s-2); }
-
-  .room-row-wrap {
+  /* ── unified row primitive ──────────────────────────────────────── */
+  .row {
     position: relative;
     display: flex;
     align-items: center;
-  }
-  .room-row-wrap:hover .room-delete { opacity: 1; }
-
-  .room-row {
-    display: flex;
-    align-items: center;
-    gap: 7px;
-    width: 100%;
-    text-align: left;
-    padding: 6px 14px 6px 12px;
-    border-left: 2px solid transparent;
-    transition: background var(--t-fast) var(--ease),
-                border-color var(--t-fast) var(--ease),
-                color var(--t-fast) var(--ease);
-  }
-  .room-row:hover { background: var(--bg-4); }
-  .room-row.active {
-    background: var(--bg-2);
-    border-left-color: var(--accent);
-  }
-  .room-row.active .room-label { color: var(--text-1); }
-  .room-row.confirm {
-    background: var(--danger-soft);
-    border-left-color: var(--danger);
+    min-height: var(--row-h);
+    padding: 0 var(--gutter-x);
     gap: 6px;
-    padding: 7px 8px 7px 12px;
   }
 
-  .room-delete {
+  /* ── room section: continuous accent rail when active ───────────── */
+  .room-section { position: relative; }
+  .room-section::before {
+    content: "";
     position: absolute;
-    right: var(--s-2);
-    top: 50%;
-    transform: translateY(-50%);
-    width: 22px; height: 22px;
+    left: 0; top: 0; bottom: 0;
+    width: var(--rail-w);
+    background: transparent;
+    transition: background var(--t-base) var(--ease);
+    pointer-events: none;
+  }
+  .room-section.active::before { background: var(--accent); }
+  .room-section.active.expanded::before { bottom: 4px; }
+
+  /* ── room row ────────────────────────────────────────────────────── */
+  .row--room {
+    padding-left: 0;
+    padding-right: 4px;
+  }
+  .row--room:hover { background: var(--bg-4); }
+  .row--room.is-active { background: var(--bg-2); }
+
+  .row-chevron-btn {
+    width: var(--chevron-col);
+    height: var(--row-h);
     display: flex; align-items: center; justify-content: center;
-    border-radius: var(--r-sm);
     color: var(--text-3);
-    opacity: 0;
-    transition: opacity var(--t-fast) var(--ease),
-                color var(--t-fast) var(--ease),
-                background var(--t-fast) var(--ease);
-  }
-  .room-delete:hover { color: var(--danger); background: var(--danger-soft); }
-
-  .confirm-text {
-    flex: 1;
-    font-size: var(--fs-xs);
-    color: var(--danger);
-    font-family: var(--font-mono);
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    letter-spacing: 0;
-  }
-  .confirm-btn {
-    padding: 3px 8px;
-    border-radius: var(--r-sm);
-    font-family: var(--font-mono);
-    font-size: var(--fs-cap);
-    font-weight: 500;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
     flex-shrink: 0;
-    transition: opacity var(--t-fast) var(--ease),
-                background var(--t-fast) var(--ease);
+    transition: color var(--t-fast) var(--ease);
   }
-  .confirm-btn.yes {
-    background: var(--danger);
-    color: var(--bg-0);
-  }
-  .confirm-btn.yes:hover { opacity: 0.86; }
-  .confirm-btn.no {
-    color: var(--text-2);
-    border: 1px solid var(--line-2);
-  }
-  .confirm-btn.no:hover { color: var(--text-1); background: var(--bg-4); }
-
-  .room-chevron {
+  .row-chevron-btn:hover { color: var(--text-1); }
+  .row-chevron {
     font-family: var(--font-mono);
     font-size: 9px;
-    color: var(--text-3);
-    width: 9px;
-    flex-shrink: 0;
     line-height: 1;
+    color: inherit;
+    display: inline-block;
+    width: 9px;
+    text-align: center;
   }
-  .room-label {
+  .row-chevron.danger { color: var(--danger); font-size: 11px; font-weight: 700; }
+
+  .row-body {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex: 1;
+    min-width: 0;
+    height: var(--row-h);
+    text-align: left;
+    background: none;
+    border: none;
+    padding: 0;
+    color: inherit;
+  }
+  .row-hash {
+    font-size: var(--fs-sm);
+    color: var(--text-4);
+    font-weight: 400;
+    flex-shrink: 0;
+    transition: color var(--t-fast) var(--ease);
+  }
+  .row--room.is-active .row-hash { color: var(--accent); }
+  .row-label {
     font-size: var(--fs-sm);
     font-weight: 500;
     color: var(--text-2);
@@ -488,49 +546,113 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    letter-spacing: -0.005em;
+    transition: color var(--t-fast) var(--ease);
   }
-  .room-label-input {
-    flex: 1;
-    background: none;
-    border: none;
-    outline: none;
-    font: inherit;
-    font-size: var(--fs-sm);
-    font-weight: 500;
-    color: var(--text-1);
-    padding: 0;
-    min-width: 0;
-  }
+  .row--room.is-active .row-label { color: var(--text-1); }
+
   .count-badge {
-    font-family: var(--font-mono);
     font-size: var(--fs-cap);
     color: var(--text-3);
     background: transparent;
     border: 1px solid var(--line-2);
     border-radius: 100px;
-    padding: 0 6px;
+    padding: 1px 6px 0;
+    line-height: 1.4;
     flex-shrink: 0;
-    line-height: 1.7;
     font-variant-numeric: tabular-nums;
+    transition: color var(--t-fast) var(--ease),
+                border-color var(--t-fast) var(--ease),
+                background var(--t-fast) var(--ease);
   }
-  .room-row.active .count-badge {
-    color: var(--accent);
+  .row--room.is-active .count-badge {
+    color: var(--accent-strong);
     border-color: var(--accent-line);
     background: var(--accent-soft);
   }
 
-  .agent-section { padding: 2px 0 4px; }
-
-  .agent-row {
+  .row-actions {
     display: flex;
     align-items: center;
-    gap: 8px;
-    padding: 4px 14px 4px 26px;
-    transition: background var(--t-fast) var(--ease);
+    gap: 2px;
+    flex-shrink: 0;
+    opacity: 0;
+    transition: opacity var(--t-fast) var(--ease);
   }
-  .agent-row:hover { background: var(--bg-4); }
-  .agent-row.exited { opacity: 0.35; }
+  .row--room:hover .row-actions,
+  .row--room:focus-within .row-actions { opacity: 1; }
+
+  /* ── inline editing room ───────────────────────────────────────── */
+  .row--editing { background: var(--bg-2); }
+
+  /* ── confirm delete row ────────────────────────────────────────── */
+  .row--confirm {
+    background: var(--danger-soft);
+    padding-left: 0;
+    padding-right: 4px;
+  }
+  .row--confirm .row-chevron.danger {
+    width: var(--chevron-col);
+    text-align: center;
+  }
+  .confirm-text {
+    flex: 1;
+    font-size: var(--fs-xs);
+    color: var(--danger);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .row-action {
+    height: 22px;
+    padding: 0 8px;
+    border-radius: var(--r-sm);
+    font-size: var(--fs-cap);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: var(--tr-cap);
+    flex-shrink: 0;
+    transition: background var(--t-fast) var(--ease),
+                color var(--t-fast) var(--ease),
+                opacity var(--t-fast) var(--ease);
+  }
+  .row-action.danger { background: var(--danger); color: var(--bg-0); }
+  .row-action.danger:hover { opacity: 0.86; }
+  .row-action.ghost { color: var(--text-3); }
+  .row-action.ghost:hover { color: var(--text-1); background: var(--bg-4); }
+
+  /* ── agent section: nested column with hairline guide ──────────── */
+  .agent-section {
+    position: relative;
+    padding: 2px 0 6px;
+  }
+  /* vertical guide line aligned with chevron column */
+  .agent-section::before {
+    content: "";
+    position: absolute;
+    left: var(--guide-x);
+    top: 0;
+    bottom: 8px;
+    width: 1px;
+    background: var(--line-1);
+    pointer-events: none;
+  }
+  .room-section.active .agent-section::before { background: var(--line-2); }
+
+  .row--agent {
+    padding-left: calc(var(--chevron-col) + var(--gutter-x));
+    padding-right: var(--gutter-x);
+    min-height: 26px;
+    gap: 8px;
+  }
+  .row--agent:hover { background: var(--bg-4); }
+  .row--agent.exited { opacity: 0.35; }
+
+  .row-guide {
+    /* invisible spacer matching the rail offset; keeps the nested rows
+       perfectly aligned with the room chevron column */
+    width: 0;
+    flex-shrink: 0;
+  }
 
   .dot {
     width: 6px; height: 6px;
@@ -538,97 +660,158 @@
     background: var(--text-4);
     flex-shrink: 0;
     box-shadow: 0 0 0 0.5px rgba(255, 255, 255, 0.06);
+    transition: background var(--t-fast) var(--ease);
   }
   .dot.starting {
     background: var(--text-3);
-    animation: pulse 1.4s var(--ease) infinite;
+    animation: dot-pulse 1.4s var(--ease) infinite;
   }
   .dot.running {
-    background: oklch(0.78 0.13 65);
-    box-shadow: 0 0 0 0.5px oklch(0.78 0.13 65 / 0.4),
+    background: var(--accent);
+    box-shadow: 0 0 0 0.5px var(--accent-line),
                 0 0 8px oklch(0.78 0.13 65 / 0.35);
   }
-  @keyframes pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.35; transform: scale(0.85); } }
+  @keyframes dot-pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50%      { opacity: 0.35; transform: scale(0.85); }
+  }
 
   .agent-name {
-    font-family: var(--font-mono);
     font-size: var(--fs-xs);
     flex: 1;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
     color: var(--text-2);
-    letter-spacing: 0;
+    background: none;
+    border: none;
+    padding: 0;
+    text-align: left;
+    cursor: text;
+    transition: color var(--t-fast) var(--ease);
   }
+  .row--agent:hover .agent-name { color: var(--text-1); }
+
   .agent-activity { flex-shrink: 0; }
 
-  .add-agent-row {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 5px 14px 5px 26px;
-    margin-top: 2px;
-    font-family: var(--font-mono);
+  .row--empty .empty-text {
     font-size: var(--fs-cap);
+    color: var(--text-4);
     text-transform: uppercase;
     letter-spacing: var(--tr-cap);
-    color: var(--text-3);
-    width: 100%;
-    text-align: left;
-    transition: color var(--t-fast) var(--ease), background var(--t-fast) var(--ease);
+    font-style: italic;
   }
-  .add-agent-row:hover { color: var(--accent); background: var(--bg-4); }
 
-  .identity {
-    border-top: 1px solid var(--line-1);
-    padding: var(--s-2);
-    flex-shrink: 0;
-    background: var(--bg-1);
+  /* ── input rows (new room + new agent + rename) ─────────────────── */
+  .row--input {
+    padding-left: 0;
+    padding-right: 4px;
+    background: var(--bg-2);
   }
-  .name-btn {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    width: 100%;
-    padding: 6px 8px;
-    border-radius: var(--r);
-    color: var(--text-2);
+  /* room-level input row inherits .row padding; the rail glyph sits in
+     the chevron slot so the input aligns with regular room labels */
+  .row > .row-rail {
+    width: var(--chevron-col);
+    text-align: center;
+    color: var(--accent);
     font-size: var(--fs-sm);
-    transition: background var(--t-fast) var(--ease), color var(--t-fast) var(--ease);
+    font-weight: 600;
+    flex-shrink: 0;
   }
-  .name-btn:hover { background: var(--bg-4); color: var(--text-1); }
-  .name-avatar {
-    width: 24px; height: 24px;
-    border-radius: 50%;
+  .row-rail--small {
+    width: 0;
+    margin-left: -2px;
+    color: var(--accent);
+    font-weight: 600;
+  }
+  .row-input {
+    flex: 1;
+    min-width: 0;
+    height: 22px;
     background: var(--bg-3);
     border: 1px solid var(--line-2);
-    display: flex; align-items: center; justify-content: center;
-    font-family: var(--font-mono);
-    font-weight: 600;
-    font-size: var(--fs-sm);
-    flex-shrink: 0;
-    color: var(--accent);
-  }
-  .name-text {
-    flex: 1;
-    text-align: left;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    font-family: var(--font-mono);
-    font-size: var(--fs-md);
-    color: var(--text-1);
-    letter-spacing: 0;
-  }
-  .name-input {
-    width: 100%;
-    background: var(--bg-3);
-    border: 1px solid var(--accent-line);
-    border-radius: var(--r);
-    padding: 6px 10px;
+    border-radius: var(--r-sm);
+    padding: 0 8px;
     font-family: var(--font-mono);
     font-size: var(--fs-xs);
     color: var(--text-1);
     outline: none;
+    transition: border-color var(--t-fast) var(--ease);
   }
+  .row-input::placeholder { color: var(--text-4); }
+  .row-input:focus { border-color: var(--accent-line); }
+
+  /* inline rename inputs sit invisibly in the row, no chrome */
+  .row-input--inline {
+    background: transparent;
+    border: 1px solid transparent;
+    border-bottom-color: var(--accent-line);
+    border-radius: 0;
+    padding: 0 2px;
+    height: 20px;
+    font-size: var(--fs-sm);
+  }
+  .row--agent .row-input--inline { font-size: var(--fs-xs); }
+
+  .row-submit {
+    height: 22px;
+    padding: 0 10px;
+    border-radius: var(--r-sm);
+    font-size: var(--fs-cap);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: var(--tr-cap);
+    background: var(--accent-soft);
+    border: 1px solid var(--accent-line);
+    color: var(--accent-strong);
+    flex-shrink: 0;
+    transition: background var(--t-fast) var(--ease),
+                color var(--t-fast) var(--ease);
+  }
+  .row-submit:hover { background: var(--accent-line); color: var(--text-1); }
+
+  /* ── identity footer (matches row geometry) ─────────────────────── */
+  .identity {
+    border-top: 1px solid var(--line-1);
+    padding: 6px var(--s-1);
+    flex-shrink: 0;
+    background: var(--bg-1);
+  }
+  .row--identity {
+    width: 100%;
+    border: none;
+    color: inherit;
+    border-radius: var(--r-sm);
+    padding: 0 8px;
+    gap: 10px;
+    transition: background var(--t-fast) var(--ease);
+  }
+  button.row--identity { text-align: left; }
+  button.row--identity:hover { background: var(--bg-4); }
+  .name-avatar {
+    width: 22px; height: 22px;
+    border-radius: var(--r-sm);
+    background: var(--bg-3);
+    border: 1px solid var(--line-2);
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700;
+    font-size: var(--fs-xs);
+    flex-shrink: 0;
+    color: var(--accent);
+    letter-spacing: 0;
+  }
+  .row--identity .row-label {
+    font-size: var(--fs-sm);
+    color: var(--text-1);
+    font-weight: 500;
+  }
+  .identity-cue {
+    font-size: var(--fs-cap);
+    color: var(--text-4);
+    text-transform: uppercase;
+    letter-spacing: var(--tr-cap);
+    opacity: 0;
+    transition: opacity var(--t-fast) var(--ease);
+  }
+  button.row--identity:hover .identity-cue { opacity: 1; }
 </style>

@@ -8,6 +8,7 @@ export type { AgentSpec };
 interface AgentHandle {
   spec: AgentSpec & { resumeSessionId?: string };
   proc: UtilityProcess;
+  currentSessionId?: string; // Tracked via IPC from agent runtime
 }
 
 const agents = new Map<string, AgentHandle>();
@@ -71,6 +72,12 @@ export function spawnAgent(spec: {
 
   proc.stdout?.on("data", (chunk: Buffer) => {
     for (const line of chunk.toString().split("\n").filter(Boolean)) {
+      // Parse session ID from agent runtime log: [name] __SESSION_ID__:uuid
+      const sessionMatch = line.match(/__SESSION_ID__:([a-f0-9-]+)/i);
+      if (sessionMatch) {
+        const h = agents.get(spec.name);
+        if (h) h.currentSessionId = sessionMatch[1];
+      }
       onLog?.(spec.name, "stdout", line);
     }
   });
@@ -116,4 +123,48 @@ export async function killAllAgents(): Promise<void> {
     try { h.proc.kill(); } catch {}
   }
   agents.clear();
+}
+
+/** Update the tracked session ID for an agent (called via IPC from agent runtime) */
+export function setAgentSessionId(name: string, sessionId: string): void {
+  const h = agents.get(name);
+  if (h) h.currentSessionId = sessionId;
+}
+
+/** Get the current session ID for an agent */
+export function getAgentSessionId(name: string): string | undefined {
+  return agents.get(name)?.currentSessionId;
+}
+
+/** Rename an agent by killing and respawning with the same session */
+export async function renameAgent(
+  oldName: string,
+  newName: string,
+): Promise<{ ok: boolean; error?: string }> {
+  const h = agents.get(oldName);
+  if (!h) return { ok: false, error: `agent '${oldName}' not found` };
+  if (agents.has(newName)) return { ok: false, error: `name '${newName}' already taken` };
+
+  // Capture current state before killing
+  const { cwd, room, model } = h.spec;
+  const sessionId = h.currentSessionId;
+
+  // Kill the old agent and wait for it to exit
+  h.proc.kill();
+  await new Promise<void>((resolve) => {
+    const check = () => {
+      if (!agents.has(oldName)) resolve();
+      else setTimeout(check, 50);
+    };
+    check();
+  });
+
+  // Respawn with new name but same session
+  return spawnAgent({
+    name: newName,
+    cwd,
+    room,
+    model,
+    resumeSessionId: sessionId,
+  });
 }

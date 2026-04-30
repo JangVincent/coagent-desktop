@@ -3,7 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import fs from "node:fs";
 import { listClaudeSessions } from "./sessions.ts";
-import { spawnAgent, killAgent, listAgents } from "./agent-manager.ts";
+import { spawnAgent, killAgent, listAgents, renameAgent, setAgentSessionId } from "./agent-manager.ts";
 
 // Lazy: app.getPath("userData") must be called after app.whenReady()
 function configPath() {
@@ -71,5 +71,14 @@ export function registerIpc(hubPort: number) {
 
   ipcMain.handle("agent:list", () => {
     return { agents: listAgents() };
+  });
+
+  ipcMain.handle("agent:rename", async (_e, { oldName, newName }: { oldName: string; newName: string }) => {
+    return renameAgent(oldName, newName);
+  });
+
+  ipcMain.handle("agent:set-session-id", (_e, { name, sessionId }: { name: string; sessionId: string }) => {
+    setAgentSessionId(name, sessionId);
+    return { ok: true };
   });
 }

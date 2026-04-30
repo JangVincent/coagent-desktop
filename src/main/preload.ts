@@ -12,6 +12,7 @@ const api: CoagentAPI = {
   listSessions: (cwd) => ipcRenderer.invoke("agent:list-sessions", cwd),
   spawnAgent: (spec) => ipcRenderer.invoke("agent:spawn", spec),
   killAgent: (name) => ipcRenderer.invoke("agent:kill", { name }),
+  renameAgent: (oldName, newName) => ipcRenderer.invoke("agent:rename", { oldName, newName }),
   listAgents: () => ipcRenderer.invoke("agent:list"),
 
   onAgentStatus: (cb) => {

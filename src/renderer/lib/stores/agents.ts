@@ -39,3 +39,13 @@ export function setAgentPaused(name: string, paused: boolean) {
     return updated;
   });
 }
+
+export function renameAgentInStore(oldName: string, newName: string) {
+  agents.update((list) => {
+    const idx = list.findIndex((a) => a.name === oldName);
+    if (idx < 0) return list;
+    const updated = [...list];
+    updated[idx] = { ...updated[idx], name: newName };
+    return updated;
+  });
+}
