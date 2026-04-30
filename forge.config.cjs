@@ -108,7 +108,13 @@ module.exports = {
     // `npm run build` (electron-vite); forge only packages out/.
     new FusesPlugin({
       version: FuseVersion.V1,
-      [FuseV1Options.RunAsNode]: false,
+      // The agent runtime spawns the Claude Code CLI via the Anthropic SDK,
+      // which calls child_process.spawn(node, [cli.js]). Packaged GUI apps
+      // can't rely on system `node` being on PATH (Finder/brew launches drop
+      // it; users on fnm/nvm don't have a stable global node). Instead we
+      // spawn process.execPath with ELECTRON_RUN_AS_NODE=1, which requires
+      // this fuse enabled.
+      [FuseV1Options.RunAsNode]: true,
       [FuseV1Options.EnableCookieEncryption]: true,
       [FuseV1Options.EnableNodeOptionsEnvironmentVariable]: false,
       [FuseV1Options.EnableNodeCliInspectArguments]: false,
