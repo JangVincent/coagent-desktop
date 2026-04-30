@@ -1,13 +1,21 @@
 {
   "name": "coagent-desktop",
   "productName": "coagent",
-  "version": "0.1.0",
+  "version": "0.1.8",
   "description": "Desktop app for coagent — multi-participant chat for Claude Code agents",
   "author": {
     "name": "Vincent Jang",
     "email": "vincentjangdev@gmail.com"
   },
   "license": "MIT",
+  "homepage": "https://github.com/JangVincent/coagent-desktop",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/JangVincent/coagent-desktop.git"
+  },
+  "bugs": {
+    "url": "https://github.com/JangVincent/coagent-desktop/issues"
+  },
   "private": true,
   "type": "module",
   "main": "dist/main/main.cjs",

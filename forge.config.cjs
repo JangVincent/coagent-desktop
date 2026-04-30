@@ -76,7 +76,7 @@ module.exports = {
           categories: ["Development", "Utility"],
           section: "devel",
           maintainer: "Vincent Jang",
-          homepage: "https://github.com/VincentJang/coagent-desktop",
+          homepage: "https://github.com/JangVincent/coagent-desktop",
         },
       },
     },
