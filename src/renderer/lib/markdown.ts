@@ -28,8 +28,27 @@ marked.use({ renderer, gfm: true, breaks: true });
 
 const ALLOWED_SCHEMES = /^(https?|mailto):/i;
 
+/**
+ * Highlight @mentions in text.
+ * Runs BEFORE markdown parsing to avoid breaking inside code blocks.
+ */
+function highlightMentions(text: string): string {
+  // Match @word but not inside backticks (inline code or fenced blocks)
+  // We'll do a simple approach: replace @mentions outside of code spans
+  return text.replace(
+    /(?<!`)`(?:[^`]|``)*`(?!`)|(@[a-zA-Z_][\w-]*)/g,
+    (match, mention) => {
+      if (mention) {
+        return `<span class="mention">${mention}</span>`;
+      }
+      return match; // preserve code spans
+    }
+  );
+}
+
 export function renderMarkdown(content: string): string {
-  const raw = marked.parse(content) as string;
+  const withMentions = highlightMentions(content);
+  const raw = marked.parse(withMentions) as string;
   return DOMPurify.sanitize(raw, {
     ALLOWED_TAGS: [
       "p", "br", "strong", "em", "del", "code", "pre", "blockquote",

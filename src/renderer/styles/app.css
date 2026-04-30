@@ -402,3 +402,13 @@ input, textarea {
 [data-theme="light"] .hljs-built_in    { color: #3a342a; }
 [data-theme="light"] .hljs-variable    { color: #5b554c; }
 [data-theme="light"] .hljs-tag         { color: #777; }
+
+/* ── Mentions ────────────────────────────────────────────────────── */
+.markdown-body .mention {
+  color: var(--accent-strong);
+  background: var(--accent-soft);
+  border-radius: var(--r-sm);
+  padding: 0.05em 0.35em;
+  font-weight: 500;
+  white-space: nowrap;
+}
