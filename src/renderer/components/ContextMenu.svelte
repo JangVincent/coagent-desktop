@@ -20,6 +20,7 @@
   let paused = $derived($agents.find((a) => a.name === agentName)?.paused ?? false);
   let showModeMenu = $state(false);
   let showModelMenu = $state(false);
+  let showEffortMenu = $state(false);
   let confirmKill = $state(false);
   let confirmClear = $state(false);
   let menu: HTMLElement;
@@ -79,6 +80,15 @@
     { id: "claude-sonnet-4-6", label: "Sonnet 4.6" },
     { id: "claude-opus-4-7", label: "Opus 4.7" },
   ];
+
+  const efforts = [
+    { id: "default", label: "Default" },
+    { id: "low", label: "Low" },
+    { id: "medium", label: "Medium" },
+    { id: "high", label: "High" },
+    { id: "xhigh", label: "XHigh" },
+    { id: "max", label: "Max" },
+  ];
 </script>
 
 <div class="menu" bind:this={menu} style:left="{left}px" style:top="{top}px" role="menu">
@@ -118,6 +128,15 @@
     {#each models as m}
       <button class="item" onclick={() => send("model", m.id)}>{m.label}</button>
     {/each}
+  {:else if showEffortMenu}
+    <button class="item back" onclick={() => (showEffortMenu = false)}>
+      <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M7 1L3 5l4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      Back
+    </button>
+    <div class="divider"></div>
+    {#each efforts as e}
+      <button class="item" onclick={() => send("effort", e.id)}>{e.label}</button>
+    {/each}
   {:else}
     <button class="item" onclick={togglePause}>
       {paused ? "▶ Resume" : "⏸ Pause"}
@@ -136,6 +155,10 @@
     </button>
     <button class="item submenu" onclick={() => (showModelMenu = true)}>
       Set model
+      <svg width="9" height="9" viewBox="0 0 9 9" fill="none"><path d="M2 1l4 3.5L2 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+    </button>
+    <button class="item submenu" onclick={() => (showEffortMenu = true)}>
+      Set effort
       <svg width="9" height="9" viewBox="0 0 9 9" fill="none"><path d="M2 1l4 3.5L2 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
     </button>
     <div class="divider"></div>

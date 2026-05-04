@@ -8,8 +8,8 @@
   import { selfName } from "../lib/stores/self.ts";
   import { reconnectWithName } from "../lib/ws-client.ts";
   import ActivityBadge from "./ActivityBadge.svelte";
-  import SessionResumeDialog from "./SessionResumeDialog.svelte";
-  import type { PastSession } from "@shared/types.ts";
+  import AddAgentDialog from "./AddAgentDialog.svelte";
+  import type { EffortLevel } from "@shared/types.ts";
   import { DEFAULT_ROOM } from "@shared/protocol.ts";
 
   let showNewRoom = $state(false);
@@ -95,48 +95,38 @@
     showNewRoom = false;
   }
 
-  let addState = $state<"idle" | "picking-session">("idle");
-  let pendingCwd = $state("");
-  let pendingSessions = $state<PastSession[]>([]);
-  let agentNameInput = $state("");
-  let showAgentName = $state(false);
+  let showAddDialog = $state(false);
   let addTargetRoom = $state(DEFAULT_ROOM);
 
-  async function addAgentToRoom(roomId: string) {
+  function addAgentToRoom(roomId: string) {
     addTargetRoom = roomId;
-    // Auto-expand the room when adding an agent so the form is visible
+    // Auto-expand the room when adding an agent so the list is visible
     if (!expandedRooms.has(roomId)) {
       expandedRooms = new Set(expandedRooms).add(roomId);
     }
-    const result = await window.coagent.pickFolder();
-    if (!result.path) return;
-    pendingCwd = result.path;
-    const parts = result.path.replace(/\\/g, "/").split("/").filter(Boolean);
-    agentNameInput = parts[parts.length - 1] ?? "agent";
-    showAgentName = true;
+    showAddDialog = true;
   }
 
-  async function confirmAgentName() {
-    const name = agentNameInput.trim();
-    if (!name) return;
-    showAgentName = false;
-    const { sessions } = await window.coagent.listSessions(pendingCwd);
-    if (sessions.length > 0) {
-      pendingSessions = sessions;
-      addState = "picking-session";
-    } else {
-      await doSpawn(undefined);
-    }
-  }
-
-  async function doSpawn(resumeSessionId: string | undefined) {
-    addState = "idle";
-    const name = agentNameInput.trim();
+  async function handleAddAgent(opts: {
+    name: string;
+    cwd: string;
+    model?: string;
+    effort: EffortLevel;
+    resumeSessionId?: string;
+  }) {
+    showAddDialog = false;
     const room = addTargetRoom;
     ensureRoom(room);
-    addAgent({ name, cwd: pendingCwd, room, status: "starting" });
+    addAgent({ name: opts.name, cwd: opts.cwd, room, model: opts.model, effort: opts.effort, status: "starting" });
     openTab(room);
-    const res = await window.coagent.spawnAgent({ name, cwd: pendingCwd, room, resumeSessionId });
+    const res = await window.coagent.spawnAgent({
+      name: opts.name,
+      cwd: opts.cwd,
+      room,
+      model: opts.model,
+      effort: opts.effort,
+      resumeSessionId: opts.resumeSessionId,
+    });
     if (!res.ok) console.error("spawn failed:", res.error);
   }
 
@@ -349,28 +339,10 @@
               </div>
             {/each}
 
-            {#if roomAgents.length === 0 && !(showAgentName && addTargetRoom === room.id)}
+            {#if roomAgents.length === 0}
               <div class="row row--agent row--empty">
                 <span class="row-guide" aria-hidden="true"></span>
                 <span class="empty-text">no agents</span>
-              </div>
-            {/if}
-
-            {#if showAgentName && addTargetRoom === room.id}
-              <div class="row row--agent row--input">
-                <span class="row-guide" aria-hidden="true"></span>
-                <span class="row-rail row-rail--small" aria-hidden="true">+</span>
-                <input
-                  class="row-input"
-                  bind:value={agentNameInput}
-                  placeholder="agent-name"
-                  use:autofocusEl
-                  onkeydown={(e) => {
-                    if (e.key === "Enter") confirmAgentName();
-                    if (e.key === "Escape") showAgentName = false;
-                  }}
-                />
-                <button class="row-submit" onclick={confirmAgentName}>add</button>
               </div>
             {/if}
           </div>
@@ -433,13 +405,11 @@
   </footer>
 </nav>
 
-{#if addState === "picking-session"}
-  <SessionResumeDialog
-    agentName={agentNameInput}
-    cwd={pendingCwd}
-    sessions={pendingSessions}
-    onConfirm={(sid) => doSpawn(sid)}
-    onCancel={() => { addState = "idle"; pendingSessions = []; }}
+{#if showAddDialog}
+  <AddAgentDialog
+    roomId={addTargetRoom}
+    onConfirm={handleAddAgent}
+    onCancel={() => { showAddDialog = false; }}
   />
 {/if}
 
@@ -767,12 +737,6 @@
     font-size: var(--fs-sm);
     font-weight: 600;
     flex-shrink: 0;
-  }
-  .row-rail--small {
-    width: 0;
-    margin-left: -2px;
-    color: var(--accent);
-    font-weight: 600;
   }
   .row-input {
     flex: 1;

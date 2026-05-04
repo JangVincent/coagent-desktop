@@ -35,6 +35,7 @@ function extractFlagValue(flag: string): string | undefined {
   return value;
 }
 const modelFlag = extractFlagValue("--model");
+const effortFlag = extractFlagValue("--effort");
 
 const positional = args.filter((a) => !a.startsWith("--"));
 const name = positional[0] ?? process.env.AGENT_NAME;
@@ -45,6 +46,15 @@ const agentRoom = process.env.AGENT_ROOM ?? DEFAULT_ROOM;
 const initialSessionId = process.env.RESUME_SESSION_ID || undefined;
 let agentModel: string | undefined =
   modelFlag ?? process.env.AGENT_MODEL ?? undefined;
+
+type EffortLevel = "low" | "medium" | "high" | "xhigh" | "max";
+const EFFORT_LEVELS: EffortLevel[] = ["low", "medium", "high", "xhigh", "max"];
+let agentEffort: EffortLevel | undefined =
+  (effortFlag as EffortLevel) ?? (process.env.AGENT_EFFORT as EffortLevel) ?? undefined;
+if (agentEffort && !EFFORT_LEVELS.includes(agentEffort)) {
+  console.warn(`[${name}] invalid effort '${agentEffort}', ignoring`);
+  agentEffort = undefined;
+}
 
 if (!name) {
   console.error("usage: entry.ts <name> [cwd]");
@@ -90,6 +100,9 @@ if (!hubIsLocal) {
 }
 if (agentModel) {
   console.log(`[${name}] model=${agentModel} (override)`);
+}
+if (agentEffort) {
+  console.log(`[${name}] effort=${agentEffort} (override)`);
 }
 if (initialSessionId) {
   console.log(`[${name}] resuming session ${initialSessionId.slice(0, 8)}…`);
@@ -185,6 +198,7 @@ async function runUsagePassthrough(requester: string) {
         resume: sessionId ?? undefined,
         abortController: controller,
         ...(agentModel ? { model: agentModel } : {}),
+        ...(agentEffort ? { extraArgs: { effort: agentEffort } } : {}),
         mcpServers: {
           "agent-chat": { type: "sdk", name: "agent-chat", instance: chatServer.instance },
         },
@@ -242,6 +256,7 @@ async function runCompact(requester: string) {
         resume: sessionId ?? undefined,
         abortController: controller,
         ...(agentModel ? { model: agentModel } : {}),
+        ...(agentEffort ? { extraArgs: { effort: agentEffort } } : {}),
         mcpServers: {
           "agent-chat": { type: "sdk", name: "agent-chat", instance: chatServer.instance },
         },
@@ -294,6 +309,7 @@ function handleControl(msg: ControlMsg) {
         `session=${sessionId ?? "(none)"}`,
         `mode=${permissionMode}`,
         `model=${agentModel ?? "(sdk default)"}`,
+        `effort=${agentEffort ?? "(sdk default)"}`,
         `task=${currentTask ?? "idle"}`,
         `paused=${paused}`,
         `queue=${queue.length}`,
@@ -333,6 +349,27 @@ function handleControl(msg: ControlMsg) {
         agentModel = argRaw;
       }
       sendAck(op, true, `${prev} → ${agentModel ?? "(sdk default)"} (applies to next turn)`, requester);
+      return;
+    }
+    case "effort": {
+      const argRaw = (msg.arg ?? "").trim().toLowerCase() as EffortLevel;
+      if (!argRaw) {
+        sendAck(op, true, `current=${agentEffort ?? "(sdk default)"}`, requester);
+        return;
+      }
+      if (argRaw === "default" || argRaw === "clear" || argRaw === "reset") {
+        const prev = agentEffort ?? "(sdk default)";
+        agentEffort = undefined;
+        sendAck(op, true, `${prev} → (sdk default) (applies to next turn)`, requester);
+        return;
+      }
+      if (!EFFORT_LEVELS.includes(argRaw)) {
+        sendAck(op, false, `invalid effort '${argRaw}' — use: ${EFFORT_LEVELS.join(", ")}`, requester);
+        return;
+      }
+      const prev = agentEffort ?? "(sdk default)";
+      agentEffort = argRaw;
+      sendAck(op, true, `${prev} → ${agentEffort} (applies to next turn)`, requester);
       return;
     }
     case "pause": {
@@ -432,6 +469,7 @@ async function processQueue() {
         resume: resumeId,
         abortController: controller,
         ...(agentModel ? { model: agentModel } : {}),
+        ...(agentEffort ? { extraArgs: { effort: agentEffort } } : {}),
         mcpServers: {
           "agent-chat": { type: "sdk", name: "agent-chat", instance: chatServer.instance },
         },

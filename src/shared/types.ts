@@ -5,6 +5,7 @@ export interface AgentSpec {
   cwd: string;
   room: string;
   model?: string;
+  effort?: EffortLevel;
   status: "starting" | "running" | "exited";
   paused?: boolean;
 }
@@ -21,11 +22,14 @@ export interface PastSession {
   turns: number;
 }
 
+export type EffortLevel = "low" | "medium" | "high" | "xhigh" | "max";
+
 export interface SpawnAgentOpts {
   name: string;
   cwd: string;
   room: string;
   model?: string;
+  effort?: EffortLevel;
   resumeSessionId?: string;
 }
 

@@ -1,0 +1,442 @@
+<script lang="ts">
+  import type { EffortLevel, PastSession } from "@shared/types.ts";
+
+  let { roomId, onConfirm, onCancel }: {
+    roomId: string;
+    onConfirm: (opts: {
+      name: string;
+      cwd: string;
+      model?: string;
+      effort: EffortLevel;
+      resumeSessionId?: string;
+    }) => void;
+    onCancel: () => void;
+  } = $props();
+
+  let cwd = $state("");
+  let name = $state("");
+  let model = $state("");
+  let effort = $state<EffortLevel>("xhigh");
+  let sessions = $state<PastSession[]>([]);
+  let selectedSession = $state<string | "fresh">("fresh");
+  let step = $state<"config" | "session">("config");
+
+  const models = [
+    { id: "", label: "Default" },
+    { id: "claude-haiku-4-5-20251001", label: "Haiku 4.5" },
+    { id: "claude-sonnet-4-6", label: "Sonnet 4.6" },
+    { id: "claude-opus-4-7", label: "Opus 4.7" },
+  ];
+
+  const efforts: { id: EffortLevel; label: string; desc: string }[] = [
+    { id: "low", label: "Low", desc: "Fast, efficient" },
+    { id: "medium", label: "Medium", desc: "Balanced" },
+    { id: "high", label: "High", desc: "Default quality" },
+    { id: "xhigh", label: "XHigh", desc: "Extended reasoning" },
+    { id: "max", label: "Max", desc: "Maximum capability" },
+  ];
+
+  async function pickDirectory() {
+    const result = await window.coagent.pickFolder();
+    if (!result.path) return;
+    cwd = result.path;
+    const parts = result.path.replace(/\\/g, "/").split("/").filter(Boolean);
+    name = parts[parts.length - 1] ?? "agent";
+  }
+
+  async function handleNext() {
+    if (!cwd || !name.trim()) return;
+    const { sessions: found } = await window.coagent.listSessions(cwd);
+    if (found.length > 0) {
+      sessions = found;
+      step = "session";
+    } else {
+      doConfirm(undefined);
+    }
+  }
+
+  function doConfirm(resumeSessionId: string | undefined) {
+    onConfirm({
+      name: name.trim(),
+      cwd,
+      model: model || undefined,
+      effort,
+      resumeSessionId,
+    });
+  }
+
+  function handleKeydown(e: KeyboardEvent) {
+    if (e.key === "Escape") onCancel();
+    if (e.key === "Enter" && step === "config" && cwd && name.trim()) handleNext();
+  }
+
+  function fmtAgo(ms: number): string {
+    const s = Math.floor((Date.now() - ms) / 1000);
+    if (s < 60) return `${s}s ago`;
+    const m = Math.floor(s / 60);
+    if (m < 60) return `${m}m ago`;
+    const h = Math.floor(m / 60);
+    if (h < 24) return `${h}h ago`;
+    return `${Math.floor(h / 24)}d ago`;
+  }
+</script>
+
+<svelte:window onkeydown={handleKeydown} />
+
+<div class="overlay" role="dialog" aria-modal="true">
+  <div class="dialog">
+    {#if step === "config"}
+      <div class="dialog-header">
+        <span class="dialog-title">Add Agent</span>
+        <span class="dialog-subtitle">to #{roomId}</span>
+      </div>
+
+      <div class="dialog-body">
+        <div class="field">
+          <label class="field-label" for="cwd-input">Directory</label>
+          <div class="field-row">
+            <input
+              id="cwd-input"
+              type="text"
+              class="field-input"
+              bind:value={cwd}
+              placeholder="Select a directory..."
+              readonly
+            />
+            <button class="btn-browse" onclick={pickDirectory}>Browse</button>
+          </div>
+        </div>
+
+        <div class="field">
+          <label class="field-label" for="name-input">Agent Name</label>
+          <input
+            id="name-input"
+            type="text"
+            class="field-input"
+            bind:value={name}
+            placeholder="my-agent"
+          />
+        </div>
+
+        <div class="field-row-2">
+          <div class="field">
+            <label class="field-label" for="model-select">Model</label>
+            <select id="model-select" class="field-select" bind:value={model}>
+              {#each models as m}
+                <option value={m.id}>{m.label}</option>
+              {/each}
+            </select>
+          </div>
+
+          <div class="field">
+            <label class="field-label" for="effort-select">Effort</label>
+            <select id="effort-select" class="field-select" bind:value={effort}>
+              {#each efforts as e}
+                <option value={e.id}>{e.label}</option>
+              {/each}
+            </select>
+          </div>
+        </div>
+
+        <div class="effort-hint">
+          {efforts.find(e => e.id === effort)?.desc ?? ""}
+        </div>
+      </div>
+
+      <div class="dialog-footer">
+        <button class="btn-cancel" onclick={onCancel}>Cancel</button>
+        <button
+          class="btn-confirm"
+          disabled={!cwd || !name.trim()}
+          onclick={handleNext}
+        >
+          Add
+        </button>
+      </div>
+    {:else}
+      <div class="dialog-header">
+        <span class="dialog-title">Resume session?</span>
+        <code class="dialog-cwd">{cwd}</code>
+      </div>
+
+      <div class="session-list" role="radiogroup">
+        <label class="session-item" class:selected={selectedSession === "fresh"}>
+          <input type="radio" name="session" value="fresh" bind:group={selectedSession} />
+          <span class="session-label">Start fresh</span>
+        </label>
+        {#each sessions as s}
+          <label class="session-item" class:selected={selectedSession === s.sid}>
+            <input type="radio" name="session" value={s.sid} bind:group={selectedSession} />
+            <span class="session-label">{s.preview || "(no preview)"}</span>
+            <span class="session-meta">{fmtAgo(s.mtimeMs)} · ~{s.turns} turns</span>
+          </label>
+        {/each}
+      </div>
+
+      <div class="dialog-footer">
+        <button class="btn-cancel" onclick={() => (step = "config")}>Back</button>
+        <button
+          class="btn-confirm"
+          onclick={() => doConfirm(selectedSession === "fresh" ? undefined : selectedSession)}
+        >
+          {selectedSession === "fresh" ? "Start fresh" : "Resume"}
+        </button>
+      </div>
+    {/if}
+  </div>
+</div>
+
+<style>
+  .overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.55);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 1000;
+    backdrop-filter: blur(6px);
+    animation: overlay-in 180ms var(--ease);
+  }
+  @keyframes overlay-in { from { opacity: 0; } to { opacity: 1; } }
+
+  .dialog {
+    background: var(--bg-2);
+    border: 1px solid var(--line-3);
+    border-radius: var(--r-xl);
+    width: 420px;
+    max-width: 90vw;
+    max-height: 80vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: var(--shadow-modal);
+    overflow: hidden;
+    animation: dialog-in 220ms var(--ease);
+  }
+  @keyframes dialog-in {
+    from { opacity: 0; transform: translateY(8px) scale(0.98); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+  }
+
+  .dialog-header {
+    padding: 22px 24px 16px;
+    border-bottom: 1px solid var(--line-1);
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex-shrink: 0;
+  }
+  .dialog-title {
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-size: var(--fs-xl);
+    font-weight: 400;
+    color: var(--text-1);
+    letter-spacing: -0.005em;
+  }
+  .dialog-subtitle {
+    font-family: var(--font-mono);
+    font-size: var(--fs-cap);
+    color: var(--text-3);
+  }
+  .dialog-cwd {
+    font-family: var(--font-mono);
+    font-size: var(--fs-cap);
+    color: var(--text-3);
+    letter-spacing: 0;
+  }
+
+  .dialog-body {
+    padding: 20px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    overflow-y: auto;
+  }
+
+  .field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .field-label {
+    font-family: var(--font-mono);
+    font-size: var(--fs-cap);
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: var(--tr-cap);
+    color: var(--text-3);
+  }
+  .field-row {
+    display: flex;
+    gap: 8px;
+  }
+  .field-row-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+  .field-input {
+    flex: 1;
+    min-height: 34px;
+    height: 34px;
+    padding: 0 12px;
+    background: var(--bg-3);
+    border: 1px solid var(--line-2);
+    border-radius: var(--r);
+    font-family: var(--font-mono);
+    font-size: var(--fs-sm);
+    color: var(--text-1);
+    outline: none;
+    transition: border-color var(--t-fast) var(--ease);
+    box-sizing: border-box;
+  }
+  .field-input::placeholder { color: var(--text-4); }
+  .field-input:focus { border-color: var(--accent-line); }
+  .field-input[readonly] {
+    cursor: pointer;
+    color: var(--text-2);
+  }
+
+  .field-select {
+    height: 34px;
+    padding: 0 10px;
+    background: var(--bg-3);
+    border: 1px solid var(--line-2);
+    border-radius: var(--r);
+    font-family: var(--font-mono);
+    font-size: var(--fs-sm);
+    color: var(--text-1);
+    cursor: pointer;
+    outline: none;
+    transition: border-color var(--t-fast) var(--ease);
+  }
+  .field-select:focus { border-color: var(--accent-line); }
+  .field-select:hover { border-color: var(--line-3); }
+
+  .btn-browse {
+    padding: 0 14px;
+    height: 34px;
+    border-radius: var(--r);
+    font-family: var(--font-mono);
+    font-size: var(--fs-cap);
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: var(--tr-cap);
+    background: var(--bg-4);
+    border: 1px solid var(--line-2);
+    color: var(--text-2);
+    cursor: pointer;
+    transition: all var(--t-fast) var(--ease);
+    flex-shrink: 0;
+  }
+  .btn-browse:hover {
+    background: var(--bg-3);
+    border-color: var(--line-3);
+    color: var(--text-1);
+  }
+
+  .effort-hint {
+    font-family: var(--font-mono);
+    font-size: var(--fs-cap);
+    color: var(--text-4);
+    text-align: center;
+    padding: 4px 0 0;
+  }
+
+  .session-list {
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    padding: var(--s-2);
+    gap: 2px;
+  }
+  .session-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    border-radius: var(--r);
+    border-left: 2px solid transparent;
+    cursor: pointer;
+    transition: background var(--t-fast) var(--ease),
+                border-color var(--t-fast) var(--ease);
+  }
+  .session-item:hover { background: var(--bg-3); }
+  .session-item.selected {
+    background: var(--accent-soft);
+    border-left-color: var(--accent);
+  }
+  .session-item input {
+    appearance: none;
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    border: 1.5px solid var(--line-3);
+    flex-shrink: 0;
+    transition: all var(--t-fast) var(--ease);
+    cursor: pointer;
+    position: relative;
+  }
+  .session-item input:checked {
+    border-color: var(--accent);
+  }
+  .session-item input:checked::after {
+    content: "";
+    position: absolute;
+    inset: 2.5px;
+    border-radius: 50%;
+    background: var(--accent);
+  }
+  .session-label {
+    font-size: var(--fs-sm);
+    flex: 1;
+    color: var(--text-1);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .session-meta {
+    font-family: var(--font-mono);
+    font-size: var(--fs-cap);
+    color: var(--text-3);
+    flex-shrink: 0;
+    letter-spacing: 0;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .dialog-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--s-2);
+    padding: var(--s-3) var(--s-4);
+    border-top: 1px solid var(--line-1);
+    flex-shrink: 0;
+  }
+  .btn-cancel {
+    padding: 7px 14px;
+    border-radius: var(--r);
+    font-family: var(--font-mono);
+    font-size: var(--fs-cap);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--text-2);
+    border: 1px solid var(--line-2);
+    background: transparent;
+    transition: all var(--t-fast) var(--ease);
+  }
+  .btn-cancel:hover { border-color: var(--line-3); color: var(--text-1); }
+  .btn-confirm {
+    padding: 7px 16px;
+    border-radius: var(--r);
+    font-family: var(--font-mono);
+    font-size: var(--fs-cap);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    background: var(--accent);
+    color: var(--bg-0);
+    transition: background var(--t-fast) var(--ease), opacity var(--t-fast) var(--ease);
+  }
+  .btn-confirm:hover { background: var(--accent-strong); }
+  .btn-confirm:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+</style>
