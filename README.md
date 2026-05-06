@@ -38,6 +38,12 @@ brew tap JangVincent/tap
 brew install --cask coagent-app
 ```
 
+To upgrade later, always run `brew update` first so the tap pulls the latest formula:
+
+```bash
+brew update && brew upgrade --cask coagent-app
+```
+
 ### macOS (Manual)
 
 Download the latest `.dmg` from [Releases](https://github.com/JangVincent/coagent-app/releases) and drag to Applications.
@@ -99,7 +105,7 @@ npm run make
 |----------|-------------|--------|
 | Windows  | Yes | Squirrel + update.electronjs.org |
 | Linux    | Yes | update.electronjs.org |
-| macOS    | No | Use `brew upgrade --cask coagent-app` |
+| macOS    | No | `brew update && brew upgrade --cask coagent-app` |
 
 macOS auto-update requires code signing, which is not currently configured. Use Homebrew for updates.
 

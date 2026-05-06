@@ -38,6 +38,12 @@ brew tap JangVincent/tap
 brew install --cask coagent-app
 ```
 
+업데이트할 때는 tap이 최신 포뮬러를 받아오도록 반드시 `brew update`를 먼저 실행하세요:
+
+```bash
+brew update && brew upgrade --cask coagent-app
+```
+
 ### macOS (수동 설치)
 
 [Releases](https://github.com/JangVincent/coagent-app/releases)에서 최신 `.dmg` 파일을 다운로드하고 Applications로 드래그하세요.
@@ -99,7 +105,7 @@ npm run make
 |--------|---------------|------|
 | Windows | 예 | Squirrel + update.electronjs.org |
 | Linux | 예 | update.electronjs.org |
-| macOS | 아니오 | `brew upgrade --cask coagent-app` 사용 |
+| macOS | 아니오 | `brew update && brew upgrade --cask coagent-app` |
 
 macOS 자동 업데이트는 코드 서명이 필요하지만 현재 설정되어 있지 않습니다. Homebrew를 통해 업데이트하세요.
 
