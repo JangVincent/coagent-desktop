@@ -58,6 +58,7 @@ export interface ChatMsg {
 export interface OutgoingMsg {
   type: "message";
   content: string;
+  room?: string; // humans address a specific room; agents omit (hub uses ws state)
 }
 
 export interface RosterMsg {

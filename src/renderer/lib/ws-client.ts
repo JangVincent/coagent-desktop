@@ -19,10 +19,10 @@ export function initWsClient(hubPort: number, name: string, room = DEFAULT_ROOM)
   connect();
 }
 
-// The human always joins the DEFAULT_ROOM — they switch "view" by selecting
-// a room in the UI, but the WS connection itself remains on the default room
-// since we need to see roster updates across all rooms. The hub broadcasts
-// the full roster (all rooms) to everyone, so one connection suffices.
+// The human ws connects in DEFAULT_ROOM and stays there — outgoing chat
+// addresses a specific room via OutgoingMsg.room, and the hub forwards
+// every room's broadcasts to humans regardless of their state.room, so
+// one connection suffices for the multi-room view.
 function connect() {
   ws = new WebSocket(`ws://127.0.0.1:${port}`);
 
@@ -65,15 +65,15 @@ function connect() {
   };
 }
 
-export function sendChat(content: string) {
+export function sendChat(content: string, room?: string) {
   if (ws?.readyState === WebSocket.OPEN) {
-    ws.send(encode({ type: MSG.MESSAGE, content }));
+    ws.send(encode({ type: MSG.MESSAGE, content, room }));
   }
 }
 
-export function sendControl(target: string, op: string, arg?: string) {
+export function sendControl(target: string, op: string, arg?: string, room?: string) {
   if (ws?.readyState === WebSocket.OPEN) {
-    ws.send(encode({ type: MSG.CONTROL, target, op, arg } as any));
+    ws.send(encode({ type: MSG.CONTROL, target, op, arg, room } as any));
   }
 }
 

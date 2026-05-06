@@ -195,9 +195,9 @@
     const isSlashCmd = slashMatch && COMMANDS.some((c) => c.name === slashMatch[1].toLowerCase());
     if (isSlashCmd) {
       const p = parseSlash(val);
-      if (p) sendControl(p.target, p.op, p.arg);
+      if (p) sendControl(p.target, p.op, p.arg, roomId);
     } else {
-      sendChat(val);
+      sendChat(val, roomId);
     }
     pushHistory(val);
     text = "";

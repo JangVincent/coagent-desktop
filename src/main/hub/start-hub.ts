@@ -49,12 +49,16 @@ export async function startHub(opts: {
     }));
   }
 
-  // Broadcast to all participants in the same room as `sender`.
+  // Broadcast to all participants in `room`. Humans always receive room
+  // broadcasts regardless of their own ws state.room, since the renderer
+  // shows a multi-room view.
   function broadcastToRoom(room: string, obj: unknown, except?: WebSocket) {
     const payload = encode(obj);
     for (const [, ws] of clients) {
       if (ws === except) continue;
-      if (participantRoom(ws) !== room) continue;
+      const st = states.get(ws);
+      const isHuman = st?.role === "human";
+      if (!isHuman && participantRoom(ws) !== room) continue;
       if (ws.readyState === WebSocket.OPEN) ws.send(payload);
     }
   }
@@ -132,9 +136,11 @@ export async function startHub(opts: {
 
       // ── chat message ───────────────────────────────────────────────────
       if (msg.type === MSG.MESSAGE && typeof msg.content === "string") {
+        // Humans may address any room via msg.room; agents always use their ws state.
+        const targetRoom = (data.role === "human" && msg.room) ? msg.room : senderRoom;
         const roomClients = new Set(
           [...clients.entries()]
-            .filter(([, w]) => participantRoom(w) === senderRoom)
+            .filter(([, w]) => participantRoom(w) === targetRoom)
             .map(([name]) => name)
         );
         roomClients.add("all");
@@ -144,9 +150,9 @@ export async function startHub(opts: {
           content: msg.content,
           mentions: parseMentions(msg.content, roomClients),
           ts: Date.now(),
-          room: senderRoom,
+          room: targetRoom,
         };
-        broadcastToRoom(senderRoom, out);
+        broadcastToRoom(targetRoom, out);
         return;
       }
 
@@ -162,7 +168,8 @@ export async function startHub(opts: {
           ws.send(encode({ type: MSG.SYSTEM, text: `control: no agent named '${msg.target}'`, room: senderRoom }));
           return;
         }
-        targetWs.send(encode({ ...msg, from: data.name, room: senderRoom }));
+        const targetRoom = targetState ? participantRoom(targetWs) : senderRoom;
+        targetWs.send(encode({ ...msg, from: data.name, room: targetRoom }));
         return;
       }
 
