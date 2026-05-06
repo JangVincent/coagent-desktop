@@ -44,21 +44,23 @@ brew install --cask coagent-app
 brew update && brew upgrade --cask coagent-app
 ```
 
+> **참고:** Homebrew cask로 설치해도 첫 실행 시 **"coagent이(가) 손상되어 열 수 없습니다"** 경고가 뜹니다. 아래 [macOS 첫 실행](#macos-첫-실행) 섹션의 명령으로 해제하세요.
+
 ### macOS (수동 설치)
 
 [Releases](https://github.com/JangVincent/coagent-app/releases)에서 최신 `.dmg` 파일을 다운로드하고 Applications로 드래그하세요.
 
 > **참고:** Apple Silicon (arm64) 전용. Intel Mac은 지원하지 않습니다.
 
-#### "coagent이(가) 손상되어 열 수 없습니다"
+### macOS 첫 실행
 
-앱이 공증되지 않아 macOS가 첫 실행 시 격리합니다. 격리 속성을 제거하세요:
+앱이 공증(notarize)되어 있지 않아 macOS가 첫 실행 시 격리하고 **"coagent이(가) 손상되어 열 수 없습니다"** 경고를 표시합니다. Homebrew cask, 수동 `.dmg` 설치 모두 동일하게 발생합니다. 설치/업데이트 후 한 번씩 격리 속성을 제거하세요:
 
 ```bash
 sudo xattr -dr com.apple.quarantine /Applications/coagent.app
 ```
 
-Homebrew와 수동 `.dmg` 설치 모두에 적용됩니다.
+업데이트 후에도 매번 다시 실행해야 합니다.
 
 ### Windows
 

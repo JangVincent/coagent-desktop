@@ -44,21 +44,23 @@ To upgrade later, always run `brew update` first so the tap pulls the latest for
 brew update && brew upgrade --cask coagent-app
 ```
 
+> **Heads up:** the first launch will show **"coagent is damaged and can't be opened"** — this happens with the Homebrew cask too. See [First launch on macOS](#first-launch-on-macos) below to clear it.
+
 ### macOS (Manual)
 
 Download the latest `.dmg` from [Releases](https://github.com/JangVincent/coagent-app/releases) and drag to Applications.
 
 > **Note:** Apple Silicon (arm64) only. Intel Macs are not supported.
 
-#### "coagent is damaged and can't be opened"
+### First launch on macOS
 
-The app is not notarized, so macOS quarantines it on first launch. Remove the quarantine attribute:
+The app is not notarized, so macOS quarantines it on first launch and shows **"coagent is damaged and can't be opened"**. This affects every install method (Homebrew cask and manual `.dmg`). Clear the quarantine attribute once per install:
 
 ```bash
 sudo xattr -dr com.apple.quarantine /Applications/coagent.app
 ```
 
-This applies to both Homebrew and manual `.dmg` installs.
+You'll need to rerun this after every upgrade as well.
 
 ### Windows
 
