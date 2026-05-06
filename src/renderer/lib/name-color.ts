@@ -21,29 +21,30 @@ const PALETTE = [
 ];
 
 // First-seen assignment: each name gets the next available palette slot
-// the first time it appears in roster, and keeps that color forever in
-// this session. Never shifts when peers leave, so log entries stay stable.
+// the first time it is asked about (by any caller), and keeps that color
+// for the rest of the session. Locking on first call — rather than only
+// when roster arrives — keeps the agent tab bar, chat sender labels, and
+// @mention pills all in agreement even when one renders before the
+// roster broadcast lands.
 const assignments = new Map<string, number>();
 let nextIndex = 0;
 
-roster.subscribe((participants) => {
-  for (const p of participants) {
-    if (!assignments.has(p.name)) {
-      assignments.set(p.name, nextIndex++);
-    }
+function indexFor(name: string): number {
+  let idx = assignments.get(name);
+  if (idx === undefined) {
+    idx = nextIndex++;
+    assignments.set(name, idx);
   }
-});
-
-function hashIndex(name: string): number {
-  let h = 0;
-  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) | 0;
-  return Math.abs(h);
+  return idx;
 }
 
+// Pre-assign in roster order when a roster broadcast arrives so colors
+// usually follow join order. Lazy assignment in nameColor() handles the
+// race where a component renders before the broadcast.
+roster.subscribe((participants) => {
+  for (const p of participants) indexFor(p.name);
+});
+
 export function nameColor(name: string): string {
-  const idx = assignments.get(name);
-  if (idx !== undefined) return PALETTE[idx % PALETTE.length];
-  // Names not in current roster (e.g. "all", historical participants):
-  // deterministic hash fallback. May collide once palette is exhausted.
-  return PALETTE[hashIndex(name) % PALETTE.length];
+  return PALETTE[indexFor(name) % PALETTE.length];
 }

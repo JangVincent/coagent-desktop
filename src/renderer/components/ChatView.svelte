@@ -94,12 +94,12 @@
 
   .sender-name {
     font-family: var(--font-mono);
-    font-size: var(--fs-cap);
+    font-size: 14px;
     font-weight: 500;
     padding-left: 2px;
     letter-spacing: 0.04em;
     text-transform: lowercase;
-    line-height: 1;
+    line-height: 1.1;
   }
 
   .bubble {
