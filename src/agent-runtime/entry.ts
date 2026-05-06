@@ -108,15 +108,6 @@ if (initialSessionId) {
   console.log(`[${name}] resuming session ${initialSessionId.slice(0, 8)}…`);
 }
 
-// SDK spawns the Claude Code CLI as `node cli.js`. Packaged GUI launches
-// (Finder/brew) have no system node on PATH, and users on fnm/nvm don't have
-// a stable global one either. Spawn process.execPath (the Electron framework
-// binary) with ELECTRON_RUN_AS_NODE=1 so the app is self-contained. The
-// RunAsNode fuse must be enabled for this to work in packaged builds —
-// see forge.config.cjs.
-process.env.ELECTRON_RUN_AS_NODE = "1";
-const NODE_EXECUTABLE = process.execPath as unknown as "node";
-
 let ws: WebSocket | null = null;
 let sessionId: string | null = initialSessionId ?? null;
 // Always send intro on first turn — it contains the critical send_chat instruction.
@@ -193,12 +184,11 @@ async function runUsagePassthrough(requester: string) {
       prompt: "/usage",
       options: {
         cwd,
-        executable: NODE_EXECUTABLE,
         permissionMode,
         resume: sessionId ?? undefined,
         abortController: controller,
         ...(agentModel ? { model: agentModel } : {}),
-        ...(agentEffort ? { extraArgs: { effort: agentEffort } } : {}),
+        ...(agentEffort ? { effort: agentEffort } : {}),
         mcpServers: {
           "agent-chat": { type: "sdk", name: "agent-chat", instance: chatServer.instance },
         },
@@ -251,12 +241,11 @@ async function runCompact(requester: string) {
       prompt: "/compact",
       options: {
         cwd,
-        executable: NODE_EXECUTABLE,
         permissionMode,
         resume: sessionId ?? undefined,
         abortController: controller,
         ...(agentModel ? { model: agentModel } : {}),
-        ...(agentEffort ? { extraArgs: { effort: agentEffort } } : {}),
+        ...(agentEffort ? { effort: agentEffort } : {}),
         mcpServers: {
           "agent-chat": { type: "sdk", name: "agent-chat", instance: chatServer.instance },
         },
@@ -464,12 +453,11 @@ async function processQueue() {
       prompt: promptText,
       options: {
         cwd,
-        executable: NODE_EXECUTABLE,
         permissionMode,
         resume: resumeId,
         abortController: controller,
         ...(agentModel ? { model: agentModel } : {}),
-        ...(agentEffort ? { extraArgs: { effort: agentEffort } } : {}),
+        ...(agentEffort ? { effort: agentEffort } : {}),
         mcpServers: {
           "agent-chat": { type: "sdk", name: "agent-chat", instance: chatServer.instance },
         },

@@ -24,12 +24,14 @@ module.exports = {
     ...(has(`${ICON_BASE}.icns`) || has(`${ICON_BASE}.ico`)
       ? { icon: ICON_BASE }
       : {}),
-    // The Claude Agent SDK ships its own cli.js, which the SDK launches via
-    // child_process.spawn(). Files inside asar can't be exec'd by the OS, so
-    // the SDK package must be unpacked or every turn fails with "Claude Code
-    // process exited with code 1" in packaged builds.
+    // The Claude Agent SDK launches a native `claude` binary shipped as a
+    // per-platform optionalDependency (e.g. @anthropic-ai/claude-agent-sdk-
+    // darwin-arm64/claude). The OS can't exec files inside asar, so any
+    // claude-agent-sdk* package must be unpacked. The wildcard covers both
+    // the wrapper package and whichever platform binary npm installed on
+    // the current build host.
     asar: {
-      unpack: "**/node_modules/@anthropic-ai/claude-agent-sdk/**",
+      unpack: "**/node_modules/@anthropic-ai/claude-agent-sdk*/**",
     },
     // We build with electron-vite (npm run build) before forge packages,
     // so exclude source/config so the .asar only ships compiled output.
@@ -108,12 +110,10 @@ module.exports = {
     // `npm run build` (electron-vite); forge only packages out/.
     new FusesPlugin({
       version: FuseVersion.V1,
-      // The agent runtime spawns the Claude Code CLI via the Anthropic SDK,
-      // which calls child_process.spawn(node, [cli.js]). Packaged GUI apps
-      // can't rely on system `node` being on PATH (Finder/brew launches drop
-      // it; users on fnm/nvm don't have a stable global node). Instead we
-      // spawn process.execPath with ELECTRON_RUN_AS_NODE=1, which requires
-      // this fuse enabled.
+      // SDK 0.2.x ships a native `claude` binary, so we no longer spawn
+      // ELECTRON_RUN_AS_NODE for the CLI itself. The fuse stays enabled
+      // because Electron's utilityProcess.fork() (used by agent-manager
+      // to spawn the agent runtime) still relies on it.
       [FuseV1Options.RunAsNode]: true,
       [FuseV1Options.EnableCookieEncryption]: true,
       [FuseV1Options.EnableNodeOptionsEnvironmentVariable]: false,
