@@ -403,6 +403,38 @@ input, textarea {
 [data-theme="light"] .hljs-variable    { color: #5b554c; }
 [data-theme="light"] .hljs-tag         { color: #777; }
 
+/* ── Diff — full-line tinted bg with gutter accent ─────────────────── */
+.markdown-body pre code .diff-line {
+  display: block;
+  margin: 0 -1em;
+  padding: 0 1em;
+  border-left: 2px solid transparent;
+  white-space: pre;
+}
+[data-theme="dark"] .hljs-addition {
+  background: rgba(63, 185, 80, 0.14);
+  color: #a3d977;
+  border-left-color: rgba(63, 185, 80, 0.7);
+}
+[data-theme="dark"] .hljs-deletion {
+  background: rgba(248, 81, 73, 0.14);
+  color: #f08c8c;
+  border-left-color: rgba(248, 81, 73, 0.7);
+}
+[data-theme="light"] .hljs-addition {
+  background: rgba(46, 160, 67, 0.12);
+  color: #1f7a32;
+  border-left-color: rgba(46, 160, 67, 0.8);
+}
+[data-theme="light"] .hljs-deletion {
+  background: rgba(207, 34, 46, 0.10);
+  color: #a8202b;
+  border-left-color: rgba(207, 34, 46, 0.8);
+}
+.markdown-body pre code .hljs-meta {
+  color: var(--text-3);
+}
+
 /* ── Mentions ────────────────────────────────────────────────────── */
 .markdown-body .mention {
   /* Use participant's nameColor via CSS variable, fallback to accent */

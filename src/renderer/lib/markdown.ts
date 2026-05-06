@@ -7,12 +7,57 @@ const COLLAPSE_LINES = 30;
 
 const renderer = new marked.Renderer();
 
+function looksLikeDiff(text: string): boolean {
+  if (/^diff --git /m.test(text)) return true;
+  if (/^@@ .* @@/m.test(text)) return true;
+  const lines = text.split("\n");
+  if (lines.length < 2) return false;
+  let diffLines = 0;
+  for (const line of lines) {
+    if (/^[+\-](?![+\-])/.test(line)) diffLines++;
+  }
+  return diffLines >= 2 && diffLines / lines.length >= 0.25;
+}
+
+function escapeHtml(s: string): string {
+  return s.replace(/[&<>"']/g, (c) => (
+    c === "&" ? "&amp;" :
+    c === "<" ? "&lt;" :
+    c === ">" ? "&gt;" :
+    c === '"' ? "&quot;" : "&#39;"
+  ));
+}
+
+// Render a diff block with each line as its own block-level span.
+// Avoids hljs diff output, which interleaves \n text nodes between
+// block spans and creates doubled line spacing inside <pre>.
+function renderDiffBlock(text: string): string {
+  return text.split("\n").map((line) => {
+    let cls = "diff-line";
+    if (
+      line.startsWith("+++") || line.startsWith("---") ||
+      line.startsWith("@@") || line.startsWith("diff ") ||
+      line.startsWith("index ") || line.startsWith("Index:")
+    ) cls += " hljs-meta";
+    else if (line.startsWith("+")) cls += " hljs-addition";
+    else if (line.startsWith("-")) cls += " hljs-deletion";
+    const content = line === "" ? "​" : escapeHtml(line);
+    return `<span class="${cls}">${content}</span>`;
+  }).join("");
+}
+
 renderer.code = function ({ text, lang }: Tokens.Code) {
-  const validLang = lang && hljs.getLanguage(lang) ? lang : "plaintext";
-  const highlighted = hljs.highlight(text, { language: validLang }).value;
+  const inferred = !lang && looksLikeDiff(text) ? "diff" : lang;
+  const isDiff = inferred === "diff";
+  const validLang = isDiff
+    ? "diff"
+    : (inferred && hljs.getLanguage(inferred) ? inferred : "plaintext");
+  const highlighted = isDiff
+    ? renderDiffBlock(text)
+    : hljs.highlight(text, { language: validLang }).value;
   const lines = text.split("\n");
   const shouldCollapse = lines.length > COLLAPSE_LINES;
-  const langLabel = lang || "code";
+  const langLabel = lang || (isDiff ? "diff" : "code");
 
   if (shouldCollapse) {
     const id = `code-${Math.random().toString(36).slice(2)}`;
