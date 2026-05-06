@@ -108,6 +108,46 @@ if (initialSessionId) {
   console.log(`[${name}] resuming session ${initialSessionId.slice(0, 8)}…`);
 }
 
+// SDK 0.2.x ships the Claude Code CLI as a per-platform native binary
+// (e.g. @anthropic-ai/claude-agent-sdk-darwin-arm64/claude). The SDK's
+// internal resolver returns a path inside app.asar in packaged builds,
+// and Electron's automatic asar→unpacked translation does not fire for
+// child_process.spawn from a utilityProcess context — every turn dies
+// with ENOTDIR. Resolve the binary ourselves and rewrite the path so
+// the OS sees the real file in app.asar.unpacked/.
+function resolveClaudeBinary(): string | undefined {
+  const exe = process.platform === "win32" ? "claude.exe" : "claude";
+  const candidates =
+    process.platform === "linux"
+      ? [
+          `@anthropic-ai/claude-agent-sdk-linux-${process.arch}-musl/${exe}`,
+          `@anthropic-ai/claude-agent-sdk-linux-${process.arch}/${exe}`,
+        ]
+      : [`@anthropic-ai/claude-agent-sdk-${process.platform}-${process.arch}/${exe}`];
+  for (const c of candidates) {
+    try {
+      let resolved = require.resolve(c);
+      // Electron packs node_modules into app.asar but Forge unpacks the
+      // claude-agent-sdk* subtree to app.asar.unpacked. require.resolve
+      // returns the asar path; rewrite to the unpacked sibling.
+      if (resolved.includes(`${path.sep}app.asar${path.sep}`)) {
+        resolved = resolved.replace(
+          `${path.sep}app.asar${path.sep}`,
+          `${path.sep}app.asar.unpacked${path.sep}`,
+        );
+      }
+      if (fs.existsSync(resolved)) return resolved;
+    } catch {}
+  }
+  return undefined;
+}
+const claudeBinaryPath = resolveClaudeBinary();
+if (claudeBinaryPath) {
+  console.log(`[${name}] claude binary: ${claudeBinaryPath}`);
+} else {
+  console.warn(`[${name}] could not resolve native claude binary; SDK will fall back`);
+}
+
 let ws: WebSocket | null = null;
 let sessionId: string | null = initialSessionId ?? null;
 // Always send intro on first turn — it contains the critical send_chat instruction.
@@ -189,6 +229,7 @@ async function runUsagePassthrough(requester: string) {
         abortController: controller,
         ...(agentModel ? { model: agentModel } : {}),
         ...(agentEffort ? { effort: agentEffort } : {}),
+        ...(claudeBinaryPath ? { pathToClaudeCodeExecutable: claudeBinaryPath } : {}),
         mcpServers: {
           "agent-chat": { type: "sdk", name: "agent-chat", instance: chatServer.instance },
         },
@@ -246,6 +287,7 @@ async function runCompact(requester: string) {
         abortController: controller,
         ...(agentModel ? { model: agentModel } : {}),
         ...(agentEffort ? { effort: agentEffort } : {}),
+        ...(claudeBinaryPath ? { pathToClaudeCodeExecutable: claudeBinaryPath } : {}),
         mcpServers: {
           "agent-chat": { type: "sdk", name: "agent-chat", instance: chatServer.instance },
         },
@@ -458,6 +500,7 @@ async function processQueue() {
         abortController: controller,
         ...(agentModel ? { model: agentModel } : {}),
         ...(agentEffort ? { effort: agentEffort } : {}),
+        ...(claudeBinaryPath ? { pathToClaudeCodeExecutable: claudeBinaryPath } : {}),
         mcpServers: {
           "agent-chat": { type: "sdk", name: "agent-chat", instance: chatServer.instance },
         },
