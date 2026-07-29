@@ -111,7 +111,7 @@ Auto-updates are enabled on Linux as well.
 | `/clear` session | yes | yes |
 | `/effort` | Low / Medium / High / XHigh / Max | Low / Medium / High / XHigh |
 | `/mode` | Default / Accept edits / Auto / Plan | fixed (bypass — required for MCP, see prereqs) |
-| `/model` | Haiku 4.5 / Sonnet 4.6 / Opus 4.7 | gpt-5 / gpt-5-codex (API-key only) |
+| `/model` | Haiku 4.5 / Sonnet 5 / Opus 4.7 / Opus 4.8 | gpt-5.1-codex-max / gpt-5.3-codex / gpt-5.6 |
 | Past-session resume from picker | yes | not yet (each new agent starts fresh; resume within the live agent works) |
 
 When you add a Codex agent in a project for the first time, coagent offers to append a `[projects."<path>"] trust_level = "trusted"` entry to `~/.codex/config.toml`. Decline if you'd rather set this manually; the agent still works without it, just without project-scoped `.codex/` overrides.

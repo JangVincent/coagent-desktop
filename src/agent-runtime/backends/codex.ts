@@ -19,10 +19,13 @@ const TARGET_TRIPLE: Record<string, Record<string, string>> = {
   win32: { arm64: "aarch64-pc-windows-msvc", x64: "x86_64-pc-windows-msvc" },
 };
 
-// `@openai/codex` ships the Rust CLI as a per-platform optionalDependency
-// (e.g. `@openai/codex-darwin-arm64/vendor/<triple>/codex/codex`). The npm
-// shim resolves and spawns it; we replicate that resolution here so we can
-// invoke the binary directly with full control over args, stdin, and abort.
+// `@openai/codex` ships the Rust CLI as a per-platform optionalDependency.
+// The vendor layout changed in codex 0.146: the binary moved from
+// `vendor/<triple>/codex/codex` (<=0.145) to `vendor/<triple>/bin/codex`
+// (>=0.146). The npm shim resolves and spawns it; we replicate that
+// resolution here so we can invoke the binary directly with full control
+// over args, stdin, and abort. Probe both layouts (newest first) so a
+// version bump in either direction keeps working.
 function resolveCodexBinary(): string | undefined {
   const triple = TARGET_TRIPLE[process.platform]?.[process.arch];
   if (!triple) return undefined;
@@ -36,8 +39,11 @@ function resolveCodexBinary(): string | undefined {
         `${path.sep}app.asar.unpacked${path.sep}`,
       );
     }
-    const candidate = path.join(path.dirname(pkgJson), "vendor", triple, "codex", exe);
-    if (fs.existsSync(candidate)) return candidate;
+    const vendor = path.join(path.dirname(pkgJson), "vendor", triple);
+    for (const subdir of ["bin", "codex"]) {
+      const candidate = path.join(vendor, subdir, exe);
+      if (fs.existsSync(candidate)) return candidate;
+    }
   } catch {}
   return undefined;
 }

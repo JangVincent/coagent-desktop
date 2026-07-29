@@ -111,7 +111,7 @@ Linux에서도 자동 업데이트가 활성화되어 있습니다.
 | `/clear` 세션 | 지원 | 지원 |
 | `/effort` | Low / Medium / High / XHigh / Max | Low / Medium / High / XHigh |
 | `/mode` | Default / Accept edits / Auto / Plan | 고정 (bypass — MCP 위해 필수, 사전 준비 참조) |
-| `/model` | Haiku 4.5 / Sonnet 4.6 / Opus 4.7 | gpt-5 / gpt-5-codex (API 키 전용) |
+| `/model` | Haiku 4.5 / Sonnet 5 / Opus 4.7 / Opus 4.8 | gpt-5.1-codex-max / gpt-5.3-codex / gpt-5.6 |
 | 과거 세션 picker로 resume | 지원 | 미지원 (새 에이전트는 항상 fresh, 살아있는 에이전트 안에서의 resume은 동작) |
 
 처음 어떤 프로젝트에 Codex 에이전트를 추가할 때, coagent가 `[projects."<path>"] trust_level = "trusted"` 항목을 `~/.codex/config.toml`에 추가할지 묻습니다. 거절해도 에이전트는 정상 동작하며, 다만 프로젝트 스코프 `.codex/` 오버라이드만 안 적용됩니다.
