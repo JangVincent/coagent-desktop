@@ -3,6 +3,12 @@
 
 import type { CoagentAPI } from "@shared/types.ts";
 
+declare module "svelte/elements" {
+  export interface HTMLAttributes<T extends EventTarget> {
+    autocorrect?: "on" | "off" | undefined | null;
+  }
+}
+
 declare global {
   interface Window {
     coagent: CoagentAPI;

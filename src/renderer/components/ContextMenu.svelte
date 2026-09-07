@@ -33,8 +33,10 @@
   // the bottom (the main menu is ~360px tall — too long to estimate safely).
   const MENU_WIDTH = 200;
   const VIEWPORT_PAD = 8;
-  let left = $state(Math.min(x, window.innerWidth - MENU_WIDTH - VIEWPORT_PAD));
-  let top = $state(y);
+  const initialLeft = () => Math.min(x, window.innerWidth - MENU_WIDTH - VIEWPORT_PAD);
+  const initialTop = () => y;
+  let left = $state(initialLeft());
+  let top = $state(initialTop());
 
   function reclamp() {
     if (!menu) return;

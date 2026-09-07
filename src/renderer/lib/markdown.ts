@@ -115,7 +115,6 @@ export function renderMarkdown(content: string, selfName?: string): string {
     ALLOWED_ATTR: ["href", "class", "id", "open", "style"],
     ALLOW_DATA_ATTR: false,
     FORBID_CONTENTS: ["script", "style"],
-    HOOK: undefined,
   });
 }
 

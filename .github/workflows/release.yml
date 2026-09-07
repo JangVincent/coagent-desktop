@@ -49,6 +49,9 @@ jobs:
         # on the CI's node-20 npm — small repo, determinism is acceptable.
         run: npm install --no-audit --no-fund
 
+      - name: Typecheck
+        run: npm run typecheck
+
       - name: Build (renderer + agent-runtime)
         run: npm run build
 
