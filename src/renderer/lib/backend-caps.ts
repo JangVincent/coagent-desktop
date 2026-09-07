@@ -42,10 +42,8 @@ export const BACKEND_CAPS: Record<BackendKind, BackendUiCaps> = {
       { id: "", label: "Default" },
       { id: "claude-haiku-4-5", label: "Haiku 4.5" },
       { id: "claude-sonnet-5", label: "Sonnet 5" },
-      { id: "claude-opus-4-7", label: "Opus 4.7" },
-      { id: "claude-opus-4-8", label: "Opus 4.8" },
       { id: "claude-opus-5", label: "Opus 5" },
-      { id: "claude-fable-5", label: "Fable 5" },
+      { id: "claude-fable-5-1", label: "Fable 5.1" },
     ],
     efforts: [
       { id: "low", label: "Low", desc: "Fast, efficient" },
@@ -68,15 +66,16 @@ export const BACKEND_CAPS: Record<BackendKind, BackendUiCaps> = {
     // always pass --dangerously-bypass-approvals-and-sandbox so the chat
     // tool can call back. Permission modes therefore have no effect today.
     mode: false,
-    // Codex accepts any slug via `--model`; these are curated presets from
-    // the bundled codex 0.146 binary (`--model` help even shows `-c model="o3"`,
-    // so users aren't limited to this list). Availability of a given model
-    // depends on the user's codex auth/plan.
+    // Codex accepts any slug via `--model`; these are the current recommended
+    // Codex presets. Users aren't limited to this list, and availability of a
+    // given model depends on their Codex auth/plan.
     models: [
       { id: "", label: "Default" },
-      { id: "gpt-5.1-codex-max", label: "GPT-5.1 Codex Max" },
-      { id: "gpt-5.3-codex", label: "GPT-5.3 Codex" },
-      { id: "gpt-5.6", label: "GPT-5.6" },
+      { id: "gpt-6-astra", label: "GPT-6 Astra" },
+      { id: "gpt-5.6-sol", label: "GPT-5.6 Sol" },
+      { id: "gpt-5.6-terra", label: "GPT-5.6 Terra" },
+      { id: "gpt-5.6-luna", label: "GPT-5.6 Luna" },
+      { id: "gpt-5.3-codex-spark", label: "GPT-5.3 Codex Spark" },
     ],
     efforts: [
       { id: "low", label: "Low", desc: "Fast, efficient" },
